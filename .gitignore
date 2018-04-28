@@ -1,0 +1,28 @@
+# C++ generated files
+*.lib
+*.o
+*.ox
+*.a
+*.ax
+*.d
+*.so
+*.os
+*.Plo
+*.lo
+
+# Vim temp files
+*.swo
+*.swp
+
+# QT project files
+*.config
+*.creator
+*.files
+*.includes
+*.user
+
+# Build Output
+bin/
+
+
+
