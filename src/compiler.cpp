@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  main.cpp                                                             */
+/*  compiler.cpp                                                         */
 /*************************************************************************/
 /*                       The MIT License (MIT)                           */
 /*************************************************************************/
@@ -28,29 +28,37 @@
 #include "compiler.h"
 
 #include <iostream>
-#include <string>
-#include <vector>
+#include <fstream>
+#include <memory>
 
 
-int main(int argc, char *argv[])
+void Compiler::compile(const std::string &p_file_path)
 {
-	if (argc <= 1)
+	std::ifstream stream(p_file_path);
+	if (!stream)
 	{
-		std::cout << "Error: No input Files." << std::endl;
+		std::cout << "Error: Cannot access " << p_file_path << std::endl;
+		return;
 	}
+	lexer.clear();
 
-	std::vector<std::string> input_files;
-
-	for (int i = 1;  i < argc; i++)
+	const int buffer_size = 4096;
+	std::unique_ptr<char[]> buffer(new char[buffer_size]);
+	while (stream)
 	{
-		input_files.push_back(argv[i]);
+		stream.read(buffer.get(), buffer_size);
+		lexer.append_code(buffer.get());
+		Lexer::Token token = lexer.advance();
+		while (token != Lexer::TK_EOF && token != Lexer::TK_ERROR)
+		{
+			std::cout << lexer.get_token_line() << ": " << lexer.get_token_value() << std::endl;
+			token = lexer.advance();
+		}
 	}
+	stream.close();
+}
 
-	Compiler compiler;
-	for (std::string file : input_files)
-	{
-		compiler.compile(file);
-	}
+Compiler::Compiler()
+{
 
-	return 0;
 }

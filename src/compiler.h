@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  main.cpp                                                             */
+/*  compiler.h                                                           */
 /*************************************************************************/
 /*                       The MIT License (MIT)                           */
 /*************************************************************************/
@@ -25,32 +25,22 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "compiler.h"
+#ifndef COMPILER_H
+#define COMPILER_H
 
-#include <iostream>
 #include <string>
-#include <vector>
 
+#include "lexer.h"
 
-int main(int argc, char *argv[])
+class Compiler
 {
-	if (argc <= 1)
-	{
-		std::cout << "Error: No input Files." << std::endl;
-	}
+private:
+	Lexer lexer;
 
-	std::vector<std::string> input_files;
+public:
+	void compile(const std::string &p_file_path);
 
-	for (int i = 1;  i < argc; i++)
-	{
-		input_files.push_back(argv[i]);
-	}
+	Compiler();
+};
 
-	Compiler compiler;
-	for (std::string file : input_files)
-	{
-		compiler.compile(file);
-	}
-
-	return 0;
-}
+#endif // COMPILER_H
