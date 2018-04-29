@@ -66,13 +66,13 @@ Lexer::Token Lexer::advance()
 		{
 			case 0:
 			{
-				return _push_token(TK_EOF, "EOF");
+				return _push_token(TK_EOF, "eof");
 			} break;
 
 			case '\r':
 				if (_look_ahead(1) != '\n')
 				{
-					return _push_token(TK_ERROR, "Expected new line.");
+					return _push_token(TK_ERROR, "expected new line.");
 				}
 				_get_next_char();
 				// fallthrough to new line
@@ -338,7 +338,7 @@ Lexer::Token Lexer::advance()
 					}
 					offset += i - 1;
 					column += i - 1;
-					return _push_token(TK_IDENTIFIER, number);
+					return _push_token(TK_CONSTANT, number);
 				}
 
 				if (c == '.')
@@ -363,7 +363,7 @@ Lexer::Token Lexer::advance()
 				return _push_token(TK_IDENTIFIER, word);
 			} break;
 		}
-		return _push_token(TK_ERROR, "Unkown token.");
+		return _push_token(TK_ERROR, "unkown token.");
 	}
 }
 

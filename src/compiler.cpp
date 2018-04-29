@@ -27,35 +27,10 @@
 
 #include "compiler.h"
 
-#include <iostream>
-#include <fstream>
-#include <memory>
-
 
 void Compiler::compile(const std::string &p_file_path)
 {
-	std::ifstream stream(p_file_path);
-	if (!stream)
-	{
-		std::cout << "Error: Cannot access " << p_file_path << std::endl;
-		return;
-	}
-	lexer.clear();
-
-	const int buffer_size = 4096;
-	std::unique_ptr<char[]> buffer(new char[buffer_size]);
-	while (stream)
-	{
-		stream.read(buffer.get(), buffer_size);
-		lexer.append_code(buffer.get());
-		Lexer::Token token = lexer.advance();
-		while (token != Lexer::TK_EOF && token != Lexer::TK_ERROR)
-		{
-			std::cout << lexer.get_token_line() << ": " << lexer.get_token_value() << std::endl;
-			token = lexer.advance();
-		}
-	}
-	stream.close();
+	parser.parse(p_file_path);
 }
 
 Compiler::Compiler()
