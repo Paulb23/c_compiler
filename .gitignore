@@ -9,6 +9,7 @@
 *.os
 *.Plo
 *.lo
+*.s
 
 # Vim temp files
 *.swo
