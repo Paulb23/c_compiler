@@ -132,7 +132,7 @@ Lexer::Token Lexer::advance()
 					_get_next_char();
 					return _push_token(TK_ASSIGN_MULTIPLICATION, "*=");
 				}
-				_push_token(TK_STAR, "*");
+				return _push_token(TK_STAR, "*");
 			} break;
 			case '%':
 			{
@@ -141,7 +141,7 @@ Lexer::Token Lexer::advance()
 					_get_next_char();
 					return _push_token(TK_ASSIGN_MODULO, "%=");
 				}
-				_push_token(TK_MODULO, "%");
+				return _push_token(TK_MODULO, "%");
 			} break;
 			case '/':
 			{

@@ -46,7 +46,8 @@ public:
 		TYPE_FUNCTION,
 		TYPE_CODE_BLOCK,
 		TYPE_RETURN,
-		TYPE_CONSTANT
+		TYPE_CONSTANT,
+		TYPE_UNARY_OP
 	};
 
 	const std::unordered_map<Type, std::string> type_to_string
@@ -57,7 +58,8 @@ public:
 		{TYPE_FUNCTION, "FUNCTION"},
 		{TYPE_CODE_BLOCK, "CODE_BLOCK"},
 		{TYPE_RETURN, "RETURN"},
-		{TYPE_CONSTANT, "CONST"}
+		{TYPE_CONSTANT, "CONST"},
+		{TYPE_UNARY_OP, "UNARY_OP"}
 	};
 
 	std::set<Lexer::Token> DeclarationSpecifiers
@@ -80,6 +82,16 @@ public:
 		Lexer::TK_VOLATILE
 	};
 
+	std::set<Lexer::Token> UnaryOperators
+	{
+		Lexer::TK_BIT_AND,
+		Lexer::TK_BIT_NOT,
+		Lexer::TK_STAR,
+		Lexer::TK_PLUS,
+		Lexer::TK_MINUS,
+		Lexer::TK_NOT
+	};
+
 	struct Node
 	{
 		Type type;
@@ -89,6 +101,7 @@ public:
 	std::unique_ptr<TreeNode<Node>> root;
 
 private:
+	Lexer::Token current_token;
 	Lexer lexer;
 
 	void _make_root(std::string p_value);
@@ -99,11 +112,14 @@ private:
 	void _print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth = 0);
 
 	Lexer::Token _get_next_token();
+	void _advance();
 
 	void _parse_declaration_list();
-	void _parse_declaration_specifiers(Lexer::Token p_current, std::unique_ptr<TreeNode<Node>> &p_current_node);
+	void _parse_declaration_specifiers(std::unique_ptr<TreeNode<Node>> &p_current_node);
 
-	void _parse_function(Lexer::Token p_current, std::unique_ptr<TreeNode<Node>> &p_current_node);
+	void _parse_function(std::unique_ptr<TreeNode<Node>> &p_current_node);
+
+	void _parse_unary_expression(std::unique_ptr<TreeNode<Node>> &p_current_node);
 public:
 	void parse(const std::string &p_file_path);
 
