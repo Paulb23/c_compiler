@@ -51,7 +51,9 @@ void Parser::parse(const std::string &p_file_path)
 	}
 	stream.close();
 
+	std::cout << "-----------------------------------------------" << std::endl;
 	_print_tree(root);
+	std::cout << "-----------------------------------------------" << std::endl;
 }
 
 void Parser::_make_root(std::string p_value)
@@ -85,13 +87,19 @@ void Parser::_error(std::string p_error)
 void Parser::_print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth)
 {
 	Node data = p_current_node->get_data();
-	std::cout << p_depth << " : " << data.type << " " << data.value << std::endl;
 
-	int depth = p_depth + 1;
+	std::string indent = std::string(p_depth, ' ' );
+	std::cout << indent << "+-" << type_to_string.at(data.type) << " " << data.value << std::endl;
+
+	int depth = p_depth + 2;
 	const std::list<std::unique_ptr<TreeNode<Node>>> &children = p_current_node->get_children();
 	for (const std::unique_ptr<TreeNode<Node>> &child : children)
 	{
 		_print_tree(child, depth);
+		if (child != children.back())
+		{
+			std::cout << indent << "  |" << std::endl;
+		}
 	}
 }
 

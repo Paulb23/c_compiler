@@ -49,6 +49,17 @@ public:
 		TYPE_CONSTANT
 	};
 
+	const std::unordered_map<Type, std::string> type_to_string
+	{
+		{TYPE_PROGRAM,"PROGRAM"},
+		{TYPE_UNKNOWN,"UNKOWN"},
+		{TYPE_DECLARATION_SPECIFIER, "DEC_SPEC"},
+		{TYPE_FUNCTION, "FUNCTION"},
+		{TYPE_CODE_BLOCK, "CODE_BLOCK"},
+		{TYPE_RETURN, "RETURN"},
+		{TYPE_CONSTANT, "CONST"}
+	};
+
 	std::set<Lexer::Token> DeclarationSpecifiers
 	{
 		Lexer::TK_TYPEDEF,
