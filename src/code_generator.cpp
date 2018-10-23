@@ -53,7 +53,7 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_roo
 			} break;
 			case Parser::TYPE_CONSTANT:
 			{
-				generated_code += "  movl $" + node.value + "," + _get_register(THRITY_TWO_BITS) + "\n";
+				generated_code += "  movl $" + node.value + ", " + _get_register(THRITY_TWO_BITS) + "\n";
 			} break;
 			case Parser::TYPE_RETURN:
 			{

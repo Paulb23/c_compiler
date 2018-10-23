@@ -56,10 +56,6 @@ void Parser::parse(const std::string &p_file_path)
 
 void Parser::_make_root(std::string p_value)
 {
-	if (root)
-	{
-		root.reset();
-	}
 	root.reset();
 	Node program;
 	program.type = TYPE_PROGRAM;
@@ -89,7 +85,7 @@ void Parser::_error(std::string p_error)
 void Parser::_print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth)
 {
 	Node data = p_current_node->get_data();
-	//std::cout << p_depth << " : " << data.type << " " << data.value << std::endl;
+	std::cout << p_depth << " : " << data.type << " " << data.value << std::endl;
 
 	int depth = p_depth + 1;
 	const std::list<std::unique_ptr<TreeNode<Node>>> &children = p_current_node->get_children();
@@ -112,10 +108,10 @@ Lexer::Token Parser::_get_next_token()
 	return token;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Grammer rules start here, based on:
-/// https://slebok.github.io/zoo/c/c99/iso-9899-tc3/extracted/index.html
-///////////////////////////////////////////////////////////////////////////////
+/*
+ * Grammer rules start here, based on:
+ * https://slebok.github.io/zoo/c/c99/iso-9899-tc3/extracted/index.html
+*/
 
 void Parser::_parse_declaration_list()
 {
@@ -138,8 +134,11 @@ void Parser::_parse_declaration_list()
 				data.type = TYPE_FUNCTION;
 				data.value = lexer.get_token_value();
 				current_node->set_data(data);
+
 				token = lexer.advance();
+
 				_parse_function(token, current_node); // assume function for now...
+
 				token = lexer.get_token();
 			};
 			case Lexer::TK_STRUCT:
@@ -183,7 +182,6 @@ void Parser::_parse_function(Lexer::Token p_current, std::unique_ptr<TreeNode<No
 
 	// handle arguments;
 	Lexer::Token token = _get_next_token();
-
 	if (token != Lexer::TK_PARENTHESIS_CLOSE)
 	{
 		_error("error: expected ')', but found: '" + lexer.get_token_value() + "'");

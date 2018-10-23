@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 
-CXXFLAGS = -Wall -std=c++11 -pedantic -ggdb -Wimplicit-fallthrough=0 -W
+CXXFLAGS = -Wall -std=c++11 -pedantic -ggdb -Wimplicit-fallthrough=0 -Wno-narrowing -W
 
 EXECUTABLE_NAME = pcc
 BIN = ./bin

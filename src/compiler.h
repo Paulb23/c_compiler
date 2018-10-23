@@ -32,12 +32,14 @@
 
 #include "parser.h"
 #include "code_generator.h"
+#include "assembler.h"
 
 class Compiler
 {
 private:
 	Parser parser;
 	CodeGenerator code_generator;
+	Assembler assembler;
 
 public:
 	void compile(const std::string &p_file_path);

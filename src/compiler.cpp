@@ -34,8 +34,11 @@ void Compiler::compile(const std::string &p_file_path)
 
 	std::unique_ptr<TreeNode<Parser::Node>> &ast = parser.root;
 
-	const std::string assembly_file_name = p_file_path.substr(0, p_file_path.find_last_of('.'));
-	code_generator.generate_code(ast, p_file_path + ".s");
+	const std::string assembly_file_name = p_file_path.substr(0, p_file_path.find_last_of('.')) + ".s";
+	code_generator.generate_code(ast, assembly_file_name);
+
+	const std::string elf_file_name = p_file_path.substr(0, p_file_path.find_last_of('.'));
+	assembler.assemble(assembly_file_name, elf_file_name);
 }
 
 Compiler::Compiler()

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  code_generator.h                                                     */
+/*  assembler.h                                                          */
 /*************************************************************************/
 /*                       The MIT License (MIT)                           */
 /*************************************************************************/
@@ -25,114 +25,58 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef CODE_GENERATOR_H
-#define CODE_GENERATOR_H
+#ifndef ASSEMBLER_H
+#define ASSEMBLER_H
 
 #include <string>
 #include <vector>
-#include <memory>
+#include <unordered_map>
+#include <elf.h>
 
-#include "parser.h"
-
-class CodeGenerator
+class Assembler
 {
 private:
-	enum Bits
+	const std::unordered_map<std::string, unsigned char> op_opcodes
 	{
-		EIGHT_BITS,
-		SIXTEEN_BITS,
-		THRITY_TWO_BITS,
-		SIXTY_FOUR_BITS
+		{"ret", 0xc3}
 	};
 
-	const std::string eight_bit_register[16]
+	const std::unordered_map<std::string, unsigned char> mov_register_opcodes
 	{
-		"%al",
-		"%bl",
-		"%cl",
-		"%dl",
-		"%sil",
-		"%dil",
-		"%bpl",
-		"%spl",
-		"%r8b",
-		"%r9b",
-		"%r10b",
-		"%r11b",
-		"%r12b",
-		"%r13b",
-		"%r14b",
-		"%r15b",
+		{"eax", 0xb8},
+		{"ebx", 0xbb},
+		{"ecx", 0xb9},
+		{"edx", 0xba},
+		{"esp", 0xbc},
+		{"ebp", 0xbd},
+		{"esl", 0xbe},
+		{"edi", 0xbf}
 	};
 
-	const std::string sixteen_bit_register[16]
-	{
-		"%ax",
-		"%bx",
-		"%cx",
-		"%dx",
-		"%si",
-		"%di",
-		"%bp",
-		"%sp",
-		"%r8w",
-		"%r9w",
-		"%r10w",
-		"%r11w",
-		"%r12w",
-		"%r13w",
-		"%r14w",
-		"%r15w",
-	};
+#define TEXT_ADDR  0x40000078
 
-	const std::string thrity_two_bit_register[16]
-	{
-		"%edi",
-		"%eax",
-		"%ebx",
-		"%ecx",
-		"%edx",
-		"%esi",
-		"%ebp",
-		"%esp",
-		"%r8d",
-		"%r9d",
-		"%r10d",
-		"%r11d",
-		"%r12d",
-		"%r13d",
-		"%r14d",
-		"%r15d",
-	};
+	int text_offset;
 
+	Elf64_Ehdr header;
+	Elf64_Phdr text_program_header;
 
-	const std::string sixty_four_bit_register[16]
-	{
-		"%rax",
-		"%rbx",
-		"%rcx",
-		"%rdx",
-		"%rsi",
-		"%rdi",
-		"%rbp",
-		"%rsp",
-		"%r8",
-		"%r9",
-		"%r10",
-		"%r11",
-		"%r12",
-		"%r13",
-		"%r14",
-		"%r15",
-	};
+	std::vector<std::string> functions;
 
-	std::vector<Parser::Node> _create_list(const std::unique_ptr<TreeNode<Parser::Node>> &p_current_node);
+	std::vector<unsigned char> text;
 
-	std::string _get_register(Bits p_bits);
+	void _generate_header();
+	void _generate_program_header();
+	void _generate_text(const std::string &p_input_file);
+
+	char _get_mov_register_opcode(const std::string &p_register);
+	int _get_next_columm(const std::string &p_text, int p_column);
+
+	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
+	void _push_string(std::vector<unsigned char> &p_vector, std::string p_string);
 public:
-	void generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_root, const std::string &p_output_file);
+	void assemble(const std::string &p_input_file, const std::string &p_output_file);
 
-	CodeGenerator();
+	Assembler();
 };
 
-#endif // CODE_GENERATOR_H
+#endif // ASSEMBLER_H
