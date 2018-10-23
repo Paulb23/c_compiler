@@ -210,8 +210,14 @@ void Parser::_parse_function(Lexer::Token p_current, std::unique_ptr<TreeNode<No
 			{
 				std::unique_ptr<TreeNode<Node>> return_value = _make_node(TYPE_CONSTANT, lexer.get_token_value());
 				node->add_child(return_value);
+				token = _get_next_token();
 			}
 			current_node->add_child(node);
+
+			if (token != Lexer::TK_SEMICOLON)
+			{
+				_error("end of statment found, expected ';' but received: '" + lexer.get_token_value() + "'");
+			}
 		}
 
 		if (token == Lexer::TK_BRACE_CLOSE)
