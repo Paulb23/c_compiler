@@ -205,6 +205,7 @@ public:
 	void append_code(const std::string &p_code);
 
 	Token advance();
+	Token peek();
 
 	Token get_token() const;
 	std::string get_token_value() const;

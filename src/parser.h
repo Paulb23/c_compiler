@@ -111,6 +111,8 @@ private:
 
 	void _print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth = 0);
 
+	Lexer::Token _peek();
+
 	Lexer::Token _get_next_token();
 	void _advance();
 

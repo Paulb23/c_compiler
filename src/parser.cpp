@@ -125,6 +125,11 @@ void Parser::_advance()
 	}
 }
 
+Lexer::Token Parser::_peek()
+{
+	return lexer.peek();
+}
+
 /*
  * Grammer rules start here, based on:
  * https://slebok.github.io/zoo/c/c99/iso-9899-tc3/extracted/index.html

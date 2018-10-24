@@ -57,6 +57,21 @@ void Lexer::append_code(const std::string &p_code)
 	code_size = p_code.length();
 }
 
+Lexer::Token Lexer::peek()
+{
+	int current_line = line;
+	int current_column = column;
+	int current_offset = offset;
+
+	Token token = advance();
+
+	line = current_line;
+	column = current_column;
+	offset = current_offset;
+
+	return token;
+}
+
 Lexer::Token Lexer::advance()
 {
 	while (true)
