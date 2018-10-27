@@ -57,7 +57,7 @@ void Lexer::append_code(const std::string &p_code)
 	code_size = p_code.length();
 }
 
-Lexer::Token Lexer::peek()
+Token Lexer::peek()
 {
 	int current_line = line;
 	int current_column = column;
@@ -72,7 +72,7 @@ Lexer::Token Lexer::peek()
 	return token;
 }
 
-Lexer::Token Lexer::advance()
+Token Lexer::advance()
 {
 	while (true)
 	{
@@ -382,7 +382,7 @@ Lexer::Token Lexer::advance()
 	}
 }
 
-Lexer::Token Lexer::_push_token(Token p_token, std::string p_value)
+Token Lexer::_push_token(Token p_token, std::string p_value)
 {
 	token_data.token = p_token;
 	token_data.value = p_value;
@@ -390,7 +390,7 @@ Lexer::Token Lexer::_push_token(Token p_token, std::string p_value)
 	return p_token;
 }
 
-Lexer::Token Lexer::get_token() const
+Token Lexer::get_token() const
 {
 	return token_data.token;
 }

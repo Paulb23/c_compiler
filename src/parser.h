@@ -33,97 +33,173 @@
 #include <memory>
 
 #include "lexer.h"
+#include "tokens.h"
 #include "./data_structures/tree_node.h"
 
 class Parser
 {
 public:
-	enum Type
+	std::set<Token> StorageClassSpecifiers
 	{
-		TYPE_PROGRAM,
-		TYPE_UNKNOWN,
-		TYPE_DECLARATION_SPECIFIER,
-		TYPE_FUNCTION,
-		TYPE_CODE_BLOCK,
-		TYPE_RETURN,
-		TYPE_CONSTANT,
-		TYPE_UNARY_OP
+		TK_TYPEDEF,
+		TK_EXTERN,
+		TK_STATIC,
+		TK_AUTO,
+		TK_REGISTER
 	};
 
-	const std::unordered_map<Type, std::string> type_to_string
+	std::set<Token> TypeSpecifiers
 	{
-		{TYPE_PROGRAM,"PROGRAM"},
-		{TYPE_UNKNOWN,"UNKOWN"},
-		{TYPE_DECLARATION_SPECIFIER, "DEC_SPEC"},
-		{TYPE_FUNCTION, "FUNCTION"},
-		{TYPE_CODE_BLOCK, "CODE_BLOCK"},
-		{TYPE_RETURN, "RETURN"},
-		{TYPE_CONSTANT, "CONST"},
-		{TYPE_UNARY_OP, "UNARY_OP"}
+		TK_VOID,
+		TK_CHAR,
+		TK_SHORT,
+		TK_INT,
+		TK_LONG,
+		TK_FLOAT,
+		TK_DOUBLE,
+		TK_SIGNED,
+		TK_UNSIGNED
 	};
 
-	std::set<Lexer::Token> DeclarationSpecifiers
+	std::set<Token> StructOrUnion
 	{
-		Lexer::TK_TYPEDEF,
-		Lexer::TK_EXTERN,
-		Lexer::TK_STATIC,
-		Lexer::TK_AUTO,
-		Lexer::TK_REGISTER,
-		Lexer::TK_VOID,
-		Lexer::TK_CHAR,
-		Lexer::TK_SHORT,
-		Lexer::TK_INT,
-		Lexer::TK_LONG,
-		Lexer::TK_FLOAT,
-		Lexer::TK_DOUBLE,
-		Lexer::TK_SIGNED,
-		Lexer::TK_UNSIGNED,
-		Lexer::TK_CONST,
-		Lexer::TK_VOLATILE
+		TK_STRUCT,
+		TK_UNION
 	};
 
-	std::set<Lexer::Token> UnaryOperators
+	std::set<Token> TypeQualifiers
 	{
-		Lexer::TK_BIT_AND,
-		Lexer::TK_BIT_NOT,
-		Lexer::TK_STAR,
-		Lexer::TK_PLUS,
-		Lexer::TK_MINUS,
-		Lexer::TK_NOT
+		TK_CONST,
+		TK_VOLATILE
+	};
+
+	std::set<Token> UnaryOperators
+	{
+		TK_BIT_AND,
+		TK_BIT_NOT,
+		TK_STAR,
+		TK_PLUS,
+		TK_MINUS,
+		TK_NOT
+	};
+
+	std::set<Token> AssignmentOperators
+	{
+		TK_ASSIGN,
+		TK_ASSIGN_MULTIPLICATION,
+		TK_ASSIGN_DIVIDE,
+		TK_ASSIGN_MODULO,
+		TK_ASSIGN_PLUS,
+		TK_ASSIGN_MINUS,
+		TK_ASSIGN_BIT_SHIFT_LEFT,
+		TK_ASSIGN_BIT_SHIFT_RIGHT,
+		TK_ASSIGN_BIT_AND,
+		TK_ASSIGN_BIT_OR,
+		TK_ASSIGN_BIT_XOR,
 	};
 
 	struct Node
 	{
-		Type type;
+		Token type;
+		Token token;
 		std::string value;
 	};
 
-	std::unique_ptr<TreeNode<Node>> root;
-
 private:
-	Lexer::Token current_token;
+	Token current_token;
 	Lexer lexer;
+	std::string current_file;
 
-	void _make_root(std::string p_value);
+	std::unique_ptr<TreeNode<Node>> _make_node(
+			Token p_type,
+			std::string p_value,
+			Token p_token = NONE
+	);
 
-	std::unique_ptr<TreeNode<Node>> _make_node(Type p_type, std::string p_value);
+	void _update_node(
+			std::unique_ptr<TreeNode<Node>> &p_node,
+			Token p_type,
+			std::string p_value,
+			Token p_token = NONE
+	);
+
 	void _error(std::string p_error);
 
-	void _print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth = 0);
+	void _print_tree(
+			const std::unique_ptr<TreeNode<Node>> &p_current_node,
+			int p_depth = 0
+	);
 
-	Lexer::Token _peek();
+	Token _peek();
 
-	Lexer::Token _get_next_token();
+	Token _get_next_token();
 	void _advance();
 
-	void _parse_declaration_list();
-	void _parse_declaration_specifiers(std::unique_ptr<TreeNode<Node>> &p_current_node);
+	void _parse_program(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
 
-	void _parse_function(std::unique_ptr<TreeNode<Node>> &p_current_node);
+	void _parse_external_declaration(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
 
-	void _parse_unary_expression(std::unique_ptr<TreeNode<Node>> &p_current_node);
+	void _parse_function_definition(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_declaration_list(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_declaration_specifiers(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_declaration(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_init_declarator_list(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_init_declarator(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+
+	void _parse_declarator(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_direct_declarator(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_compound_statment(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_block_item_list(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_jump_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
 public:
-	void parse(const std::string &p_file_path);
+	std::unique_ptr<TreeNode<Node>> parse(const std::string &p_file_path);
 
 	Parser();
 };

@@ -41,27 +41,28 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_roo
 	std::vector<Parser::Node> node_list = _create_list(p_root);
 
 	int i = 0;
-	while (i < node_list.size())
+/*	while (i < node_list.size())
 	{
 		Parser::Node node = node_list[i];
+		std::cout << "Handling: " << node.value << std::endl;
 
 		switch (node.type)
 		{
-			case Parser::TYPE_FUNCTION:
+			case TYPE_FUNCTION:
 			{
 				generated_code += ".globl " + node.value + "\n" + node.value + ":\n";
 			} break;
-			case Parser::TYPE_CONSTANT:
+			case TYPE_CONSTANT:
 			{
 				generated_code += "  movl $" + node.value + ", " + _get_register(THRITY_TWO_BITS) + "\n";
 			} break;
-			case Parser::TYPE_RETURN:
+			case TYPE_RETURN:
 			{
 				i++;
 				node = node_list[i];
 				switch (node.type)
 				{
-					case Parser::TYPE_CONSTANT:
+					case TYPE_CONSTANT:
 					{
 						generated_code += "  movl $" + node.value + "," + _get_register(THRITY_TWO_BITS) + "\n";
 					} break;
@@ -73,7 +74,7 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_roo
 			}break;
 		}
 		i++;
-	}
+	}*/
 	std::cout << generated_code << std::endl;
 	std::ofstream file;
 	file.open(p_output_file);

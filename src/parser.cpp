@@ -30,16 +30,18 @@
 #include <iostream>
 #include <fstream>
 
-void Parser::parse(const std::string &p_file_path)
+std::unique_ptr<TreeNode<Parser::Node>> Parser::parse(const std::string &p_file_path)
 {
 	std::ifstream stream(p_file_path);
 	if (!stream)
 	{
 		std::cout << "error: Cannot access " << p_file_path << std::endl;
-		return;
+		return NULL;
 	}
 	lexer.clear();
-	_make_root(p_file_path);
+
+	current_file = p_file_path;
+	std::unique_ptr<TreeNode<Node>> root = _make_node(TYPE_PROGRAM, p_file_path);
 
 	const int buffer_size = 4096;
 	std::unique_ptr<char[]> buffer(new char[buffer_size]);
@@ -47,29 +49,25 @@ void Parser::parse(const std::string &p_file_path)
 	{
 		stream.read(buffer.get(), buffer_size);
 		lexer.append_code(buffer.get());
-		_parse_declaration_list();
+		_parse_program(root);
 	}
 	stream.close();
 
 	std::cout << "-----------------------------------------------" << std::endl;
 	_print_tree(root);
 	std::cout << "-----------------------------------------------" << std::endl;
+
+	return root;
 }
 
-void Parser::_make_root(std::string p_value)
-{
-	root.reset();
-	Node program;
-	program.type = TYPE_PROGRAM;
-	program.value = p_value;
-	root = std::unique_ptr<TreeNode<Node>>(new TreeNode<Node>());
-	root->set_data(program);
-}
-
-std::unique_ptr<TreeNode<Parser::Node>> Parser::_make_node(Type p_type, std::string p_value)
-{
+std::unique_ptr<TreeNode<Parser::Node>> Parser::_make_node(
+		Token p_type,
+		std::string p_value,
+		Token p_token
+) {
 	Node node;
 	node.type = p_type;
+	node.token = p_token;
 	node.value = p_value;
 
 	std::unique_ptr<TreeNode<Node>> tree_node(new TreeNode<Node>());
@@ -77,22 +75,41 @@ std::unique_ptr<TreeNode<Parser::Node>> Parser::_make_node(Type p_type, std::str
 	return tree_node;
 }
 
+void Parser::_update_node(
+		std::unique_ptr<TreeNode<Node>> &p_node,
+		Token p_type,
+		std::string p_value,
+		Token p_token
+) {
+	Node node = p_node->get_data();
+	node.type = p_type;
+	node.value = p_value;
+	node.token = p_token;
+	p_node->set_data(node);
+}
+
 void Parser::_error(std::string p_error)
 {
-	std::cout << root->get_data().value << ":" + (lexer.get_token_line() + 1) << ": error: " << p_error << std::endl;
+	std::cout << current_file << ": line " << (lexer.get_token_line() + 1);
+	std::cout << ": error: " << p_error << std::endl;
 	exit(0);
 }
 
 
-void Parser::_print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, int p_depth)
-{
+void Parser::_print_tree(
+		const std::unique_ptr<TreeNode<Node>> &p_current_node,
+		int p_depth
+) {
 	Node data = p_current_node->get_data();
 
 	std::string indent = std::string(p_depth, ' ' );
-	std::cout << indent << "+-" << type_to_string.at(data.type) << " " << data.value << std::endl;
+	std::cout << indent << "+-";
+	std::cout << token_to_string.at(data.type) << " " << data.value << std::endl;
 
 	int depth = p_depth + 2;
+
 	const std::list<std::unique_ptr<TreeNode<Node>>> &children = p_current_node->get_children();
+
 	for (const std::unique_ptr<TreeNode<Node>> &child : children)
 	{
 		_print_tree(child, depth);
@@ -103,13 +120,13 @@ void Parser::_print_tree(const std::unique_ptr<TreeNode<Node>> &p_current_node, 
 	}
 }
 
-Lexer::Token Parser::_get_next_token()
+Token Parser::_get_next_token()
 {
-	Lexer::Token token = lexer.get_token();
-	while (token != Lexer::TK_EOF && token != Lexer::TK_ERROR)
+	Token token = lexer.get_token();
+	while (token != TK_EOF && token != TK_ERROR)
 	{
 		token = lexer.advance();
-		if (token != Lexer::TK_NEWLINE) {
+		if (token != TK_NEWLINE) {
 			break;
 		}
 	}
@@ -119,13 +136,13 @@ Lexer::Token Parser::_get_next_token()
 void Parser::_advance()
 {
 	current_token = _get_next_token();
-	if (current_token == Lexer::TK_ERROR)
+	if (current_token == TK_ERROR)
 	{
 		_error("cannot reconise symbol '" + lexer.get_token_value() + "'");
 	}
 }
 
-Lexer::Token Parser::_peek()
+Token Parser::_peek()
 {
 	return lexer.peek();
 }
@@ -135,133 +152,217 @@ Lexer::Token Parser::_peek()
  * https://slebok.github.io/zoo/c/c99/iso-9899-tc3/extracted/index.html
 */
 
-void Parser::_parse_declaration_list()
-{
-	std::unique_ptr<TreeNode<Node>> current_node = _make_node(TYPE_UNKNOWN, "");
-	_advance();
-	while (current_token != Lexer::TK_EOF && current_token != Lexer::TK_ERROR)
-	{
-		if (DeclarationSpecifiers.count(current_token) == 0)
-		{
-			_error("expected declaration, but found: '" + lexer.get_token_value() + "'");
-		}
-
-		_parse_declaration_specifiers(current_node);
-		switch (current_token)
-		{
-			case Lexer::TK_IDENTIFIER:
-			{
-				Node data = current_node->get_data();
-				data.type = TYPE_FUNCTION;
-				data.value = lexer.get_token_value();
-				current_node->set_data(data);
-
-				_advance();
-				_parse_function(current_node); // assume function for now...
-				_advance();
-			};
-			case Lexer::TK_STRUCT:
-			case Lexer::TK_UNION:
-			{
-				//_parse_union_or_struct();
-			} break;
-			case Lexer::TK_ENUM:
-			{
-				//_parse_enum();
-				std::cout << lexer.get_token_value() << std::endl;
-			} break;
-			default:
-			{
-			} break;
-		}
-		_advance();
-	}
-	root->add_child(current_node);
+void Parser::_parse_program(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	_parse_external_declaration(p_parent);
 }
 
-void Parser::_parse_declaration_specifiers(std::unique_ptr<TreeNode<Node>> &p_current_node)
-{
-	if (DeclarationSpecifiers.count(current_token) == 0)
+void Parser::_parse_external_declaration(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> current_node = _make_node(TYPE_EXTERNAL_DECLARATION, "");
+
+	_advance();
+
+	/* assume function, need better look ahead. */
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_FUNCTION_DECLARATION, "");
+	_parse_function_definition(node);
+
+	current_node->add_child(node);
+	p_parent->add_child(current_node);
+}
+
+void Parser::_parse_function_definition(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> declaration_specifiers = _make_node(TYPE_DECLARATION_SPECIFIER, "");
+	_parse_declaration_specifiers(declaration_specifiers);
+	p_parent->add_child(declaration_specifiers);
+
+	std::unique_ptr<TreeNode<Node>> declarators = _make_node(TYPE_DECLARATOR, "");
+	_parse_declarator(declarators);
+	p_parent->add_child(declarators);
+
+	// parse optional list?
+
+	std::unique_ptr<TreeNode<Node>> compound_statement = _make_node(TYPE_COMPOUND_STATEMENT, "");
+	_parse_compound_statment(compound_statement);
+	p_parent->add_child(compound_statement);
+}
+
+void Parser::_parse_declaration_specifiers(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool top_level
+) {
+	std::unique_ptr<TreeNode<Node>> node = NULL;
+	if (StorageClassSpecifiers.count(current_token))
 	{
+		node = _make_node(
+			TYPE_STORAGE_CLASS_SPECIFIER,
+			lexer.get_token_value(),
+			current_token
+		);
+	}
+	else if (TypeSpecifiers.count(current_token))
+	{
+		node = _make_node(
+			TYPE_TYPE_SPECIFIER,
+			lexer.get_token_value(),
+			current_token
+		);
+		/*
+		 * TODO: struct-or-union, enum-specifier, typedef-name
+		 */
+	}
+	else if (TypeQualifiers.count(current_token))
+	{
+		node = _make_node(
+			TYPE_TYPE_QUALIFIER,
+			lexer.get_token_value(),
+			current_token
+		);
+	}
+	/*
+	 * TODO: function-specifier
+	 */
+
+	if (node == NULL)
+	{
+		if (top_level)
+		{
+			_error("expected declaration specifiers, but found none.");
+		}
 		return;
 	}
-
-	std::unique_ptr<TreeNode<Node>> current_node = _make_node(TYPE_DECLARATION_SPECIFIER, lexer.get_token_value());
-	p_current_node->add_child(current_node);
+	p_parent->add_child(node);
 
 	_advance();
-	_parse_declaration_specifiers(p_current_node);
+	_parse_declaration_specifiers(p_parent, false);
 }
 
-void Parser::_parse_function(std::unique_ptr<TreeNode<Node>> &p_current_node)
-{
-	if (current_token != Lexer::TK_PARENTHESIS_OPEN)
+void Parser::_parse_declarator(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	if (current_token == TK_STAR)
 	{
-		_error("error: expected '(', but found: '" + lexer.get_token_value() + "'");
+		//TODO: _parse_pointer();
 	}
 
-	// handle arguments;
-	_advance();
-	if (current_token != Lexer::TK_PARENTHESIS_CLOSE)
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_DIRECT_DECLARATOR, "");
+	_parse_direct_declarator(node);
+	p_parent->add_child(node);
+}
+
+void Parser::_parse_direct_declarator(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
+) {
+	std::unique_ptr<TreeNode<Node>> node = NULL;
+	if (current_token == TK_IDENTIFIER)
 	{
-		_error("error: expected ')', but found: '" + lexer.get_token_value() + "'");
+		node = _make_node(TYPE_IDENTIFIER, lexer.get_token_value(), TK_IDENTIFIER);
 	}
 
-	_advance();
-	if (current_token != Lexer::TK_BRACE_OPEN)
+	// function args only for now.
+	if (current_token == TK_PARENTHESIS_OPEN)
 	{
-		_error("error: expected '{', but found: '" + lexer.get_token_value() + "'");
-	}
+		node = _make_node(TK_PARENTHESIS_OPEN, lexer.get_token_value(), TK_PARENTHESIS_OPEN);
+		// TODO: parse argument list here.
+		p_parent->add_child(node);
 
-	std::unique_ptr<TreeNode<Node>> current_node = _make_node(TYPE_CODE_BLOCK, "code_block");
-	while (true)
-	{
 		_advance();
-		if (current_token == Lexer::TK_EOF)
+		if (current_token != TK_PARENTHESIS_CLOSE)
 		{
-			_error("end of file found expected '}'");
+			_error("expected ')' but found: '" + lexer.get_token_value() + "'");
 		}
-
-		if (current_token == Lexer::TK_RETURN)
-		{
-			std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_RETURN, lexer.get_token_value());
-
-			_parse_unary_expression(node);
-			_advance();
-
-			current_node->add_child(node);
-
-			if (current_token != Lexer::TK_SEMICOLON)
-			{
-				_error("end of statment found, expected ';' but received: '" + lexer.get_token_value() + "'");
-			}
-		}
-
-		if (current_token == Lexer::TK_BRACE_CLOSE)
-		{
-			break;
-		}
+		node = _make_node(TK_PARENTHESIS_CLOSE, lexer.get_token_value(), TK_PARENTHESIS_CLOSE);
 	}
-	p_current_node->add_child(current_node);
-}
 
-void Parser::_parse_unary_expression(std::unique_ptr<TreeNode<Node>> &p_current_node)
-{
-	_advance();
-	if (current_token == Lexer::TK_CONSTANT)
+	if (node == NULL)
 	{
-		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_CONSTANT, lexer.get_token_value());
-		p_current_node->add_child(node);
+		if (required)
+		{
+			_error("expected identifier, but found none.");
+		}
 		return;
 	}
+	p_parent->add_child(node);
 
-	if (UnaryOperators.count(current_token))
+	_advance();
+	_parse_direct_declarator(p_parent, false);
+}
+
+void Parser::_parse_compound_statment(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> node = NULL;
+	if (current_token != TK_BRACE_OPEN)
 	{
-		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_UNARY_OP, lexer.get_token_value());
-		p_current_node->add_child(node);
+		_error("expected '{' but found: '" + lexer.get_token_value() + "'");
+	}
+	node = _make_node(TK_BRACE_OPEN, lexer.get_token_value(), TK_BRACE_OPEN);
+	p_parent->add_child(node);
+	_advance();
+
+	node = _make_node(TYPE_BLOCK_ITEM_LIST, "");
+	_parse_block_item_list(node);
+	p_parent->add_child(node);
+
+	if (current_token != TK_BRACE_CLOSE)
+	{
+		_error("expected '}' but found: '" + lexer.get_token_value() + "'");
+	}
+	node = _make_node(TK_BRACE_CLOSE, lexer.get_token_value(), TK_BRACE_CLOSE);
+	p_parent->add_child(node);
+	_advance();
+}
+
+void Parser::_parse_block_item_list(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	// just parse statments for now...
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_STATEMENT, "");;
+	_parse_statement(node);
+	p_parent->add_child(node);
+}
+
+void Parser::_parse_statement(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	// just jump statments..
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");;
+	_parse_jump_statement(node);
+	p_parent->add_child(node);
+}
+
+void Parser::_parse_jump_statement(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> node = NULL;
+	// just returns...
+	if (current_token == TK_RETURN)
+	{
+		node = _make_node(TK_RETURN, lexer.get_token_value(), TK_RETURN);
+		p_parent->add_child(node);
+		_advance();
 	}
 
-	_parse_unary_expression(p_current_node);
+	// asume there's a conststant for now.
+	if (current_token == TK_CONSTANT)
+	{
+		node = _make_node(TYPE_CONSTANT, lexer.get_token_value(), TK_CONSTANT);
+		p_parent->add_child(node);
+		_advance();
+	}
+
+	if (current_token != TK_SEMICOLON)
+	{
+		_error("expected ';' but found: '" + lexer.get_token_value() + "'");
+	}
+	node = _make_node(TK_SEMICOLON, lexer.get_token_value(), TK_SEMICOLON);
+	p_parent->add_child(node);
+	_advance();
 }
 
 Parser::Parser()
