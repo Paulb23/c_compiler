@@ -51,7 +51,7 @@ void Assembler::assemble(const std::string &p_input_file, const std::string &p_o
 	file.write((char *)&header, sizeof(Elf64_Ehdr));
 	file.write((char *)&text_program_header, sizeof(Elf64_Phdr));
 
-	for(int i=0; i< text.size(); ++i)
+	for(unsigned int i=0; i< text.size(); ++i)
 		std::cout << std::hex << (int)text[i];
 
 	for (const char opcode : text) {
@@ -107,7 +107,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 	std::string line;
 	while (std::getline(input, line))
 	{
-		int column = 0;
+		unsigned int column = 0;
 		std::string operation = "";
 		while (column < line.size())
 		{
@@ -200,6 +200,7 @@ char Assembler::_get_mov_register_opcode(const std::string &p_register)
 	}
 
 	std::cout << "error: move register '" << p_register << "' not reconized" << std::endl;
+	return 0x0;
 }
 
 int Assembler::_get_next_columm(const std::string &p_text, int p_column)

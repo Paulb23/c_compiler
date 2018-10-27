@@ -40,15 +40,13 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::No
 	std::string generated_code = "";
 	std::vector<SymanticAnalysier::Node> node_list = _create_list(p_root);
 
-	int i = 0;
-/*	while (i < node_list.size())
+	unsigned int i = 0;
+	while (i < node_list.size())
 	{
-		Parser::Node node = node_list[i];
-		std::cout << "Handling: " << node.value << std::endl;
-
+		SymanticAnalysier::Node node = node_list[i];
 		switch (node.type)
 		{
-			case TYPE_FUNCTION:
+			case FUNCTION:
 			{
 				generated_code += ".globl " + node.value + "\n" + node.value + ":\n";
 			} break;
@@ -56,7 +54,7 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::No
 			{
 				generated_code += "  movl $" + node.value + ", " + _get_register(THRITY_TWO_BITS) + "\n";
 			} break;
-			case TYPE_RETURN:
+			case TK_RETURN:
 			{
 				i++;
 				node = node_list[i];
@@ -74,8 +72,12 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::No
 			}break;
 		}
 		i++;
-	}*/
+	}
+
+	std::cout << "-----------------------------------------------" << std::endl;
 	std::cout << generated_code << std::endl;
+	std::cout << "-----------------------------------------------" << std::endl;
+
 	std::ofstream file;
 	file.open(p_output_file);
 	file << generated_code;
