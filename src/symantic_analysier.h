@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  compiler.cpp                                                         */
+/*  symantic_analysier.h                                                 */
 /*************************************************************************/
 /*                       The MIT License (MIT)                           */
 /*************************************************************************/
@@ -25,22 +25,72 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "compiler.h"
+#ifndef SYMANTIC_ANALYSIER_H
+#define SYMANTIC_ANALYSIER_H
 
+#include <string>
+#include <memory>
+#include <vector>
 
-void Compiler::compile(const std::string &p_file_path)
+#include "parser.h"
+#include "tokens.h"
+#include "./data_structures/tree_node.h"
+
+class SymanticAnalysier
 {
-	std::unique_ptr<TreeNode<Parser::Node>> parse_tree = parser.parse(p_file_path);
-	std::unique_ptr<TreeNode<SymanticAnalysier::Node>> ast = symantic_analysier.analyise(parse_tree);
+public:
 
-	const std::string assembly_file_name = p_file_path.substr(0, p_file_path.find_last_of('.')) + ".s";
-	code_generator.generate_code(ast, assembly_file_name);
+	struct Node
+	{
+		Token type;
+		std::string value;
+	};
+private:
 
-	const std::string elf_file_name = p_file_path.substr(0, p_file_path.find_last_of('.'));
-	assembler.assemble(assembly_file_name, elf_file_name);
-}
+	std::vector<Parser::Node> _create_list(
+			const std::unique_ptr<TreeNode<Parser::Node>> &p_root
+	);
 
-Compiler::Compiler()
-{
+	std::unique_ptr<TreeNode<Node>> _make_node(
+			Token p_type,
+			std::string p_value
+	);
 
-}
+	void _update_node(
+			std::unique_ptr<TreeNode<Node>> &p_node,
+			Token p_type,
+			std::string p_value
+	);
+
+	void _error(std::string p_error);
+
+	void _print_tree(
+			const std::unique_ptr<TreeNode<Node>> &p_current_node,
+			int p_depth = 0
+	);
+
+
+	unsigned int current_node_offset;
+	std::vector<Parser::Node> tree_vector;
+	Parser::Node current_node;
+
+	void _advance();
+
+	void _analyse_function_declaration(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _analyse_code_block(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+
+public:
+	std::unique_ptr<TreeNode<Node>> analyise(
+			const std::unique_ptr<TreeNode<Parser::Node>> &parse_tree
+	);
+
+	SymanticAnalysier();
+};
+
+#endif // SYMANTIC_ANALYSIER_H

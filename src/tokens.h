@@ -187,7 +187,11 @@ enum Token
 	TYPE_STRING_LITERAL,
 	TYPE_CONSTANT,
 
-	TYPE_UNKNOWN
+	TYPE_UNKNOWN,
+
+	/* Symatic analysis */
+	FUNCTION,
+	CODE_BLOCK
 };
 
 const std::unordered_map<Token, std::string> token_to_string
@@ -355,7 +359,11 @@ const std::unordered_map<Token, std::string> token_to_string
 	{TYPE_STRING_LITERAL, "STRING_LITERAL"},
 	{TYPE_CONSTANT, "CONSTANT"},
 
-	{TYPE_UNKNOWN, ""}
+	{TYPE_UNKNOWN, ""},
+
+	/* Symatic analysis */
+	{FUNCTION, "FUNCTION"},
+	{CODE_BLOCK, "CODE_BLOCK"}
 };
 
 

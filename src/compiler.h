@@ -31,6 +31,7 @@
 #include <string>
 
 #include "parser.h"
+#include "symantic_analysier.h"
 #include "code_generator.h"
 #include "assembler.h"
 
@@ -38,6 +39,7 @@ class Compiler
 {
 private:
 	Parser parser;
+	SymanticAnalysier symantic_analysier;
 	CodeGenerator code_generator;
 	Assembler assembler;
 

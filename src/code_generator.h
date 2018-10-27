@@ -33,7 +33,7 @@
 #include <memory>
 
 #include "tokens.h"
-#include "parser.h"
+#include "symantic_analysier.h"
 
 class CodeGenerator
 {
@@ -127,11 +127,11 @@ private:
 		"%r15",
 	};
 
-	std::vector<Parser::Node> _create_list(const std::unique_ptr<TreeNode<Parser::Node>> &p_current_node);
+	std::vector<SymanticAnalysier::Node> _create_list(const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_current_node);
 
 	std::string _get_register(Bits p_bits);
 public:
-	void generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_root, const std::string &p_output_file);
+	void generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root, const std::string &p_output_file);
 
 	CodeGenerator();
 };

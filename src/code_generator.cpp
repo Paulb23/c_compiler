@@ -35,10 +35,10 @@
 
 #include "./data_structures/tree_node.h"
 
-void CodeGenerator::generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_root, const std::string &p_output_file)
+void CodeGenerator::generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root, const std::string &p_output_file)
 {
 	std::string generated_code = "";
-	std::vector<Parser::Node> node_list = _create_list(p_root);
+	std::vector<SymanticAnalysier::Node> node_list = _create_list(p_root);
 
 	int i = 0;
 /*	while (i < node_list.size())
@@ -82,16 +82,16 @@ void CodeGenerator::generate_code(std::unique_ptr<TreeNode<Parser::Node>> &p_roo
 	file.close();
 }
 
-std::vector<Parser::Node> CodeGenerator::_create_list(const std::unique_ptr<TreeNode<Parser::Node>> &p_current_node)
+std::vector<SymanticAnalysier::Node> CodeGenerator::_create_list(const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_current_node)
 {
-	std::vector<Parser::Node> node_list;
+	std::vector<SymanticAnalysier::Node> node_list;
 	node_list.push_back(p_current_node->get_data());
 
-	const std::list<std::unique_ptr<TreeNode<Parser::Node>>> &children = p_current_node->get_children();
-	for (const std::unique_ptr<TreeNode<Parser::Node>> &child : children)
+	const std::list<std::unique_ptr<TreeNode<SymanticAnalysier::Node>>> &children = p_current_node->get_children();
+	for (const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &child : children)
 	{
-		std::vector<Parser::Node> child_nodes = _create_list(child);
-		for (Parser::Node &childs : child_nodes)
+		std::vector<SymanticAnalysier::Node> child_nodes = _create_list(child);
+		for (SymanticAnalysier::Node &childs : child_nodes)
 		{
 			node_list.push_back(childs);
 		}
