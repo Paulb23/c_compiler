@@ -38,100 +38,33 @@
 class CodeGenerator
 {
 private:
-	enum Bits
-	{
-		EIGHT_BITS,
-		SIXTEEN_BITS,
-		THRITY_TWO_BITS,
-		SIXTY_FOUR_BITS
-	};
 
-	const std::string eight_bit_register[16]
-	{
-		"%al",
-		"%bl",
-		"%cl",
-		"%dl",
-		"%sil",
-		"%dil",
-		"%bpl",
-		"%spl",
-		"%r8b",
-		"%r9b",
-		"%r10b",
-		"%r11b",
-		"%r12b",
-		"%r13b",
-		"%r14b",
-		"%r15b",
-	};
+	std::vector<SymanticAnalysier::Node> _create_list(
+			const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root
+	);
 
-	const std::string sixteen_bit_register[16]
-	{
-		"%ax",
-		"%bx",
-		"%cx",
-		"%dx",
-		"%si",
-		"%di",
-		"%bp",
-		"%sp",
-		"%r8w",
-		"%r9w",
-		"%r10w",
-		"%r11w",
-		"%r12w",
-		"%r13w",
-		"%r14w",
-		"%r15w",
-	};
+	void _error(std::string p_error);
 
-	const std::string thrity_two_bit_register[16]
-	{
-		"%edi",
-		"%eax",
-		"%ebx",
-		"%ecx",
-		"%edx",
-		"%esi",
-		"%ebp",
-		"%esp",
-		"%r8d",
-		"%r9d",
-		"%r10d",
-		"%r11d",
-		"%r12d",
-		"%r13d",
-		"%r14d",
-		"%r15d",
-	};
+	unsigned int last_line;
+	std::vector<std::string> code;
 
+	unsigned int current_node_offset;
+	std::vector<SymanticAnalysier::Node> tree_vector;
+	SymanticAnalysier::Node current_node;
 
-	const std::string sixty_four_bit_register[16]
-	{
-		"%rax",
-		"%rbx",
-		"%rcx",
-		"%rdx",
-		"%rsi",
-		"%rdi",
-		"%rbp",
-		"%rsp",
-		"%r8",
-		"%r9",
-		"%r10",
-		"%r11",
-		"%r12",
-		"%r13",
-		"%r14",
-		"%r15",
-	};
+	void _advance();
+	void _append_line(std::string p_code);
+	void _set_line(unsigned int p_line, std::string p_code);
 
-	std::vector<SymanticAnalysier::Node> _create_list(const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_current_node);
+	void _generate_program();
+	void _generate_function();
+	void _generate_code_block();
 
-	std::string _get_register(Bits p_bits);
 public:
-	void generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root, const std::string &p_output_file);
+	void generate_code(
+			std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root,
+			const std::string &p_output_file
+	);
 
 	CodeGenerator();
 };

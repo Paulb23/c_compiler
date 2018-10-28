@@ -35,61 +35,42 @@
 
 #include "./data_structures/tree_node.h"
 
-void CodeGenerator::generate_code(std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root, const std::string &p_output_file)
-{
-	std::string generated_code = "";
-	std::vector<SymanticAnalysier::Node> node_list = _create_list(p_root);
+void CodeGenerator::generate_code(
+		std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root,
+		const std::string &p_output_file
+) {
+	code.clear();
+	current_node_offset = -1;
+	tree_vector = _create_list(p_root);
+	_advance();
 
-	unsigned int i = 0;
-	while (i < node_list.size())
+	if (current_node.type != TYPE_PROGRAM)
 	{
-		SymanticAnalysier::Node node = node_list[i];
-		switch (node.type)
-		{
-			case FUNCTION:
-			{
-				generated_code += ".globl " + node.value + "\n" + node.value + ":\n";
-			} break;
-			case TYPE_CONSTANT:
-			{
-				generated_code += "  movl $" + node.value + ", " + _get_register(THRITY_TWO_BITS) + "\n";
-			} break;
-			case TK_RETURN:
-			{
-				i++;
-				node = node_list[i];
-				switch (node.type)
-				{
-					case TYPE_CONSTANT:
-					{
-						generated_code += "  movl $" + node.value + "," + _get_register(THRITY_TWO_BITS) + "\n";
-					} break;
-				}
-				generated_code += "  ret\n";
-			} break;
-			default:
-			{
-			}break;
-		}
-		i++;
+		_error("expected program, but found: '" + token_to_string.at(current_node.type) + "'");
 	}
 
-	std::cout << "-----------------------------------------------" << std::endl;
-	std::cout << generated_code << std::endl;
-	std::cout << "-----------------------------------------------" << std::endl;
+	_advance();
+	_generate_program();
 
+	std::cout << "-----------------------------------------------" << std::endl;
 	std::ofstream file;
 	file.open(p_output_file);
-	file << generated_code;
+	for (const std::string line : code)
+	{
+		std::cout << line << std::endl;
+		file << line + "\n";
+	}
 	file.close();
+	std::cout << "-----------------------------------------------" << std::endl;
 }
 
-std::vector<SymanticAnalysier::Node> CodeGenerator::_create_list(const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_current_node)
-{
+std::vector<SymanticAnalysier::Node> CodeGenerator::_create_list(
+		const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root
+) {
 	std::vector<SymanticAnalysier::Node> node_list;
-	node_list.push_back(p_current_node->get_data());
+	node_list.push_back(p_root->get_data());
 
-	const std::list<std::unique_ptr<TreeNode<SymanticAnalysier::Node>>> &children = p_current_node->get_children();
+	const std::list<std::unique_ptr<TreeNode<SymanticAnalysier::Node>>> &children = p_root->get_children();
 	for (const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &child : children)
 	{
 		std::vector<SymanticAnalysier::Node> child_nodes = _create_list(child);
@@ -101,29 +82,77 @@ std::vector<SymanticAnalysier::Node> CodeGenerator::_create_list(const std::uniq
 	return node_list;
 }
 
-std::string CodeGenerator::_get_register(Bits p_bits)
+void CodeGenerator::_error(std::string p_error)
 {
-	switch (p_bits) {
-	case EIGHT_BITS:
+	std::cout << "error: " << p_error << std::endl;
+	exit(0);
+}
+
+void CodeGenerator::_advance()
+{
+	if (current_node_offset + 1 > tree_vector.size())
 	{
-		return eight_bit_register[0];
-	} break;
-	case SIXTEEN_BITS:
-	{
-		return sixteen_bit_register[0];
-	} break;
-	case THRITY_TWO_BITS:
-	{
-		return thrity_two_bit_register[0];
-	} break;
-	case SIXTY_FOUR_BITS:
-	{
-		return sixteen_bit_register[0];
-	} break;
-	default:
-		break;
+		return;
 	}
-	return eight_bit_register[0];
+	current_node_offset++;
+	current_node = tree_vector[current_node_offset];
+}
+
+void CodeGenerator::_append_line(std::string p_code)
+{
+	_set_line(last_line + 1, p_code);
+}
+
+void CodeGenerator::_set_line(unsigned int p_line, std::string p_code)
+{
+	if (p_line > last_line)
+	{
+		code.push_back(p_code);
+		last_line++;
+		return;
+	}
+	code[p_line] = p_code;
+}
+
+/*
+ * Assembly generation starts here.
+ */
+
+void CodeGenerator::_generate_program()
+{
+	/* we know there's only one for now */
+	_generate_function();
+}
+
+void CodeGenerator::_generate_function()
+{
+	_append_line("globl " + current_node.value);
+	_append_line(current_node.value + ":");
+
+	_advance();
+
+	// args here
+	// advance
+
+	if (current_node.type == CODE_BLOCK)
+	{
+		_advance();
+		_generate_code_block();
+	}
+}
+
+void CodeGenerator::_generate_code_block()
+{
+	/* only hand returns for now */
+	if (current_node.type == TK_RETURN)
+	{
+		_advance();
+		if (current_node.type == TYPE_CONSTANT)
+		{
+			_append_line("  movl $" + current_node.value + ",%eax");
+		}
+		_append_line("  ret");
+	}
 }
 
 CodeGenerator::CodeGenerator()

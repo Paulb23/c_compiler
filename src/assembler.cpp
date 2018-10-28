@@ -52,9 +52,12 @@ void Assembler::assemble(const std::string &p_input_file, const std::string &p_o
 	file.write((char *)&text_program_header, sizeof(Elf64_Phdr));
 
 	for(unsigned int i=0; i< text.size(); ++i)
+	{
 		std::cout << std::hex << (int)text[i];
+	}
 
-	for (const char opcode : text) {
+	for (const char opcode : text)
+	{
 		file.write((const char *)&opcode, 1);
 	}
 
@@ -169,25 +172,21 @@ void Assembler::_generate_text(const std::string &p_input_file)
 	}
 
 	/*
-	 * move edi, 0x07
-	 */
-//	text.push_back(0xBF);
-//	text.push_back(0x04);
-//	text.push_back(0x00);
-//	text.push_back(0x00);
-//	text.push_back(0x00);
-
-	/*
 	 * append program exit
 	 *
+	 *  mov edi,eax
 	 *	mov eax,0x3c
 	 *	syscall
 	 */
+	text.push_back(0x89);
+	text.push_back(0xC7);
+
 	text.push_back(0xB8);
 	text.push_back(0x3C);
 	text.push_back(0x00);
 	text.push_back(0x00);
 	text.push_back(0x00);
+
 	text.push_back(0x0F);
 	text.push_back(0x05);
 }

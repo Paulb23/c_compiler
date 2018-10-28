@@ -66,8 +66,6 @@ std::unique_ptr<TreeNode<SymanticAnalysier::Node>> SymanticAnalysier::analyise(
 		root->add_child(node);
 	}
 
-
-
 	std::cout << "-----------------------------------------------" << std::endl;
 	_print_tree(root);
 	std::cout << "-----------------------------------------------" << std::endl;

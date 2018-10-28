@@ -95,7 +95,6 @@ void Parser::_error(std::string p_error)
 	exit(0);
 }
 
-
 void Parser::_print_tree(
 		const std::unique_ptr<TreeNode<Node>> &p_current_node,
 		int p_depth
