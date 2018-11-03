@@ -30,13 +30,27 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <memory>
 #include <unordered_map>
 #include <elf.h>
 
-#define HEX( x ) setw(2) << setfill('0') << hex << (int)( x )
-
-void Assembler::assemble(const std::string &p_input_file, const std::string &p_output_file)
+static bool _is_number(const char &c)
 {
+	return (c >= '0' && c <= '9');
+}
+
+static bool _is_text_char(const char &c)
+{
+	return  (c >= 'a' && c <= 'z') ||
+			(c >= 'A' && c <= 'Z') ||
+			_is_number(c)          ||
+			c == '_';
+}
+
+void Assembler::assemble(
+		const std::string &p_input_file,
+		const std::string &p_output_file
+) {
 	_generate_header();
 	_generate_program_header();
 
@@ -106,75 +120,60 @@ void Assembler::_generate_program_header()
 
 void Assembler::_generate_text(const std::string &p_input_file)
 {
-	std::ifstream input(p_input_file);
-	std::string line;
-	while (std::getline(input, line))
+	_load_assembly(p_input_file);
+
+	Node node = _advance();
+	while (node.type != TK_EOF && node.type != TK_ERROR)
 	{
-		unsigned int column = 0;
-		std::string operation = "";
-		while (column < line.size())
+		switch (node.type)
 		{
-			column = _get_next_columm(line, column);
-
-			if (line[column] == ':')
+			case TK_GLOB:
 			{
-				functions.push_back(operation);
-				column++;
-				continue;
-			}
-
-			operation += line[column];
-
-			if (operation == "mov")
+				// TODO: implement
+			} break;
+			case TK_IDENTIFIER:
 			{
-				char type = line[++column];
-				std::string source = "";
-				std::string destination = "";
-
-				column = _get_next_columm(line, ++column);
-
-				if (line[column] == '$')
+				node = _advance();
+				if (node.type != TK_COLON)
 				{
-					column++;
-					while (line[column] != ',' && line[column] != ' ' && line[column] != '\t')
+					_error("expected ':' but found '" + node.value + "'");
+				}
+			} break;
+			case TK_MOV:
+			{
+				node = _advance();
+
+				/* TODO: move to function */
+				Node source = node;
+
+				/* skip comma */
+				node = _advance();
+				node = _advance();
+				switch (node.type) {
+					case TK_REGISTER:
 					{
-						source += line[column];
-						column++;
-					}
+						text.push_back(_get_mov_register_opcode(node.value));
+					} break;
 				}
 
-				column = _get_next_columm(line, ++column);
-				if (line[column] == '%')
-				{
-					column++;
-					while (line[column] != ',' && line[column] != ' ' && line[column] != '\t' && line[column] != '\0')
+				switch (source.type) {
+					case TK_CONSTANT:
 					{
-						destination += line[column];
-						column++;
-					}
-					text.push_back(_get_mov_register_opcode(destination));
+						_push_int(text, std::stoi(source.value));
+					} break;
 				}
 
-				if (type == 'l')
-				{
-					_push_int(text, std::stoi(source));
-				}
-			}
-
-			if (op_opcodes.count(operation) > 0)
-			{
-				//text.push_back(op_opcodes.at(operation));
-				operation = "";
-			}
-
-			column++;
+			} break;
 		}
+
+		std::cout << token_to_string.at(node.type) << " " << token_to_string.at(node.op) << " " << node.value << std::endl;
+		node = _advance();
 	}
 
 	/*
 	 * append program exit
 	 *
-	 *  mov edi,eax
+	 *	mov edi,eax
 	 *	mov eax,0x3c
 	 *	syscall
 	 */
@@ -202,15 +201,6 @@ char Assembler::_get_mov_register_opcode(const std::string &p_register)
 	return 0x0;
 }
 
-int Assembler::_get_next_columm(const std::string &p_text, int p_column)
-{
-	while (p_text[p_column] != '\0' && (p_text[p_column] == ' ' || p_text[p_column] == '\t'))
-	{
-		p_column++;
-	}
-	return p_column;
-}
-
 void Assembler::_push_int(std::vector<unsigned char> &p_vector, int p_value)
 {
 	p_vector.push_back(p_value & 0xFF);
@@ -228,6 +218,252 @@ void Assembler::_push_string(std::vector<unsigned char> &p_vector, std::string p
 
 	// add null terminator
 	p_vector.push_back(0);
+}
+
+/*
+ * Assembeler Lexer parser
+ */
+
+void Assembler::_error(std::string p_error)
+{
+	std::cout << "assembler: line " << (assembly_line);
+	std::cout << ": error: " << p_error << std::endl;
+	exit(0);
+}
+
+void Assembler::_load_assembly(const std::string &p_file)
+{
+	const int buffer_size = 4096;
+	std::unique_ptr<char[]> buffer(new char[buffer_size]);
+	std::ifstream stream(p_file);
+	while (stream)
+	{
+		stream.read(buffer.get(), buffer_size);
+		assembly_code.append(buffer.get());
+	}
+	stream.close();
+	assembly_code_size = assembly_code.length();
+	assembly_offset = -1;
+	assembly_line = 0;
+}
+
+Assembler::Node Assembler::_advance()
+{
+	while (true)
+	{
+		const char &c = _get_next_char();
+		switch(c)
+		{
+			case 0:
+			{
+				return _make_node(TK_EOF, "eof");
+			} break;
+
+			case '\r':
+				if (_look_ahead(1) != '\n')
+				{
+					return _make_node(TK_ERROR, "expected new line.");
+				}
+				_get_next_char();
+				// fallthrough to new line
+			case '\n':
+				assembly_line++;
+				return _make_node(TK_NEWLINE, "\n");
+
+			// whitespace
+			case ' ':
+			case '\t':
+				continue;
+
+			case '#':
+			{
+				while (true)
+				{
+					const char &cc = _get_next_char();
+					if (cc == '\n' || (cc == '\r' && _look_ahead(1) == '\n'))
+					{
+						break;
+					}
+				}
+				assembly_offset--;
+				continue;
+			} break;
+			case '/':
+			{
+				if (_look_ahead(1) != '*')
+				{
+					_error("expected multiline comment");
+				}
+
+				_get_next_char();
+				while (true)
+				{
+					const char &cc = _get_next_char();
+					if (cc == '\n' || (cc == '\r' && _look_ahead(1) == '\n'))
+					{
+						assembly_line++;
+					}
+
+					if (cc == '0' || (cc == '*' && _look_ahead(1) == '/'))
+					{
+						_get_next_char();
+						break;
+					}
+				}
+				continue;
+			} break;
+			case ':':
+			{
+				return _make_node(TK_COLON, ":");
+			} break;
+			case '-':
+			{
+				return _make_node(TK_MINUS, "-");
+			} break;
+			case ',':
+			{
+				return _make_node(TK_COMMA, ",");
+			} break;
+			case '$':
+			{
+				std::string value;
+				Node tk_value = _advance();
+				if (tk_value.type == TK_MINUS)
+				{
+					value != "-";
+					tk_value = _advance();
+				}
+
+				if (tk_value.type != TK_CONSTANT)
+				{
+					_error("expetect number but found '" + tk_value.value + "'" );
+				}
+				value += tk_value.value;
+				return _make_node(TK_CONSTANT, value);
+			} break;
+			case '%':
+			{
+				Node tk_value = _advance();
+				if (tk_value.type != TK_IDENTIFIER)
+				{
+					_error("expetect identifier but found '" + tk_value.value + "'" );
+				}
+				return _make_node(TK_REGISTER, tk_value.value);
+			} break;
+			default:
+			{
+				if (_is_number(c))
+				{
+					int i = 0;
+					std::string number;
+					while (_is_number(_look_ahead(i)))
+					{
+						number += _look_ahead(i);
+						i++;
+					}
+					assembly_offset += i - 1;
+					return _make_node(TK_CONSTANT, number);
+				}
+
+				int i = 0;
+				std::string word;
+				while (_is_text_char(_look_ahead(i)))
+				{
+					word += _look_ahead(i);
+					i++;
+				}
+				assembly_offset += i - 1;
+
+				if (word == "globl")
+				{
+					Node value = _advance();
+					if (value.type != TK_IDENTIFIER)
+					{
+						_error("expected identifier, but found: '" + token_to_string.at(value.type) + "'" );
+					}
+					return _make_node(TK_GLOB, value.value);
+				}
+
+				if (word.find("mov") == 0)
+				{
+					return _make_node(TK_MOV, word, _get_op_type(word));
+				}
+
+				if (word.find("ret") == 0)
+				{
+					return _make_node(TK_RET, word);
+				}
+
+				return _make_node(TK_IDENTIFIER, word);
+			} break;
+		}
+		return _make_node(TK_ERROR, "unkown token");
+	}
+}
+
+Token Assembler::_get_op_type(const std::string &p_instruction)
+{
+	if (p_instruction.length() <= 3)
+	{
+		return OP_NONE;
+	}
+
+	std::string type = p_instruction.substr(3, p_instruction.length());
+	if (type == "b")
+	{
+		return OP_BYTE;
+	}
+
+	if (type == "s")
+	{
+		return OP_SHORT;
+	}
+
+	if (type == "w")
+	{
+		return OP_WORD;
+	}
+
+	if (type == "l")
+	{
+		return OP_LONG;
+	}
+
+	if (type == "q")
+	{
+		return OP_QUAD;
+	}
+
+	if (type == "t")
+	{
+		return OP_TEN_BYTE;
+	}
+
+	return OP_NONE;
+}
+
+Assembler::Node Assembler::_make_node(Token p_token, std::string p_value, Token p_op)
+{
+	Node node;
+	node.type = p_token;
+	node.value = p_value;
+	node.op = p_op;
+	return node;
+}
+
+char Assembler::_get_next_char()
+{
+	assembly_offset++;
+	return _look_ahead(0);
+}
+
+char Assembler::_look_ahead(const int p_amount)
+{
+	if (assembly_offset + p_amount >= assembly_code_size)
+	{
+		return 0;
+	}
+	return assembly_code[assembly_offset + p_amount];
 }
 
 Assembler::Assembler()

@@ -191,7 +191,21 @@ enum Token
 
 	/* Symatic analysis */
 	FUNCTION,
-	CODE_BLOCK
+	CODE_BLOCK,
+
+	/* assembler tokens */
+	OP_NONE,
+	OP_BYTE,
+	OP_SHORT,
+	OP_WORD,
+	OP_LONG,
+	OP_QUAD,
+	OP_TEN_BYTE,
+
+	TK_GLOB,
+	TK_LABEL,
+	TK_MOV,
+	TK_RET,
 };
 
 const std::unordered_map<Token, std::string> token_to_string
@@ -363,7 +377,21 @@ const std::unordered_map<Token, std::string> token_to_string
 
 	/* Symatic analysis */
 	{FUNCTION, "FUNCTION"},
-	{CODE_BLOCK, "CODE_BLOCK"}
+	{CODE_BLOCK, "CODE_BLOCK"},
+
+	/* Assembeler */
+	{ OP_NONE, "NONE"},
+	{ OP_BYTE, "BYTE"},
+	{ OP_SHORT, "SHORT"},
+	{ OP_WORD, "WORD"},
+	{ OP_LONG, "LONG"},
+	{ OP_QUAD, "QUAD"},
+	{ OP_TEN_BYTE, "TEN_BYTE"},
+
+	{ TK_GLOB, "GLOB"},
+	{ TK_LABEL, "LABEL"},
+	{ TK_MOV, "MOV"},
+	{ TK_RET, "RET"}
 };
 
 

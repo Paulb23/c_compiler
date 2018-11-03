@@ -33,6 +33,8 @@
 #include <unordered_map>
 #include <elf.h>
 
+#include "tokens.h"
+
 class Assembler
 {
 private:
@@ -55,8 +57,6 @@ private:
 
 #define TEXT_ADDR  0x40000078
 
-	int text_offset;
-
 	Elf64_Ehdr header;
 	Elf64_Phdr text_program_header;
 
@@ -69,10 +69,36 @@ private:
 	void _generate_text(const std::string &p_input_file);
 
 	char _get_mov_register_opcode(const std::string &p_register);
-	int _get_next_columm(const std::string &p_text, int p_column);
 
 	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
 	void _push_string(std::vector<unsigned char> &p_vector, std::string p_string);
+
+	/*
+	 * Assembeler Lexer parser
+	 */
+	struct Node
+	{
+		Token type;
+		Token op;
+		std::string value;
+	};
+	std::string assembly_code;
+	int assembly_code_size;
+	int assembly_offset;
+	int assembly_line;
+
+	void _error(std::string p_error);
+
+	void _load_assembly(const std::string &p_file);
+
+	Node _advance();
+
+	Node _make_node(Token p_token, std::string p_value, Token p_op = NONE);
+
+	Token _get_op_type(const std::string &p_instruction);
+
+	char _get_next_char();
+	char _look_ahead(const int p_amount);
 public:
 	void assemble(const std::string &p_input_file, const std::string &p_output_file);
 
