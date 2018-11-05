@@ -97,25 +97,30 @@ void Parser::_error(std::string p_error)
 
 void Parser::_print_tree(
 		const std::unique_ptr<TreeNode<Node>> &p_current_node,
-		int p_depth
+		bool p_last_child,
+		std::string p_indent
 ) {
 	Node data = p_current_node->get_data();
 
-	std::string indent = std::string(p_depth, ' ' );
-	std::cout << indent << "+-";
-	std::cout << token_to_string.at(data.type) << " " << data.value << std::endl;
+	std::cout << p_indent << std::ends;
+	if (p_last_child)
+	{
+		std::cout << " └─" << std::ends;
+		p_indent += "    ";
+	}
+	else
+	{
+		std::cout << " ├─" << std::ends;
+		p_indent += " | ";
+	}
 
-	int depth = p_depth + 2;
+	std::cout << token_to_string.at(data.type) << " " << data.value << std::endl;
 
 	const std::list<std::unique_ptr<TreeNode<Node>>> &children = p_current_node->get_children();
 
 	for (const std::unique_ptr<TreeNode<Node>> &child : children)
 	{
-		_print_tree(child, depth);
-		if (child != children.back())
-		{
-			std::cout << indent << "  |" << std::endl;
-		}
+		_print_tree(child, child == children.back(), p_indent);
 	}
 }
 

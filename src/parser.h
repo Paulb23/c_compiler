@@ -127,7 +127,8 @@ private:
 
 	void _print_tree(
 			const std::unique_ptr<TreeNode<Node>> &p_current_node,
-			int p_depth = 0
+			bool p_last_child = true,
+			std::string p_indent = ""
 	);
 
 	Token _peek();
