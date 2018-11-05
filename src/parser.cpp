@@ -655,9 +655,9 @@ void Parser::_parse_multiplicative_expression(
 	p_parent->add_child(cast_expression);
 
 	if (
-			current_token != TK_ASSIGN_MULTIPLICATION &&
+			current_token != TK_STAR &&
 			current_token != TK_DIVIDE &&
-			current_token != TK_ASSIGN_MODULO
+			current_token != TK_MODULO
 	) {
 		return;
 	}
