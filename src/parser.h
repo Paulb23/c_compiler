@@ -172,7 +172,6 @@ private:
 			bool required = true
 	);
 
-
 	void _parse_declarator(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
@@ -195,6 +194,74 @@ private:
 	);
 
 	void _parse_jump_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_assignment_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_conditional_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_logical_or_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_logical_and_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_inclusive_or_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_exclusive_or_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_and_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_equality_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_relational_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_shift_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_additive_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_multiplicative_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_cast_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_unary_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_postfix_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_primary_expression(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 

@@ -347,12 +347,11 @@ void Parser::_parse_jump_statement(
 		_advance();
 	}
 
-	// asume there's a conststant for now.
-	if (current_token == TK_CONSTANT)
+	if (current_token != TK_SEMICOLON)
 	{
-		node = _make_node(TYPE_CONSTANT, lexer.get_token_value(), TK_CONSTANT);
-		p_parent->add_child(node);
-		_advance();
+		std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+		_parse_expression(expression);
+		p_parent->add_child(expression);
 	}
 
 	if (current_token != TK_SEMICOLON)
@@ -362,6 +361,421 @@ void Parser::_parse_jump_statement(
 	node = _make_node(TK_SEMICOLON, lexer.get_token_value(), TK_SEMICOLON);
 	p_parent->add_child(node);
 	_advance();
+}
+
+void Parser::_parse_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_ASSIGNMENT_EXPRESSION, "");
+	_parse_assignment_expression(node);
+	p_parent->add_child(node);
+
+	if (current_token != TK_COMMA)
+	{
+		return;
+	}
+	std::unique_ptr<TreeNode<Node>> comma = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(comma);
+	_advance();
+
+	_parse_expression(p_parent);
+}
+
+void Parser::_parse_assignment_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	//TODO: unary expression
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_CONDITIONAL_EXPRESSION, "");
+	_parse_conditional_expression(node);
+
+	p_parent->add_child(node);
+}
+
+void Parser::_parse_conditional_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> logical_or = _make_node(TYPE_LOGICAL_OR_EXPRESSION, "");
+	_parse_logical_or_expression(logical_or);
+	p_parent->add_child(logical_or);
+
+	if (current_token != TK_QUESION_MARK)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> question_mark = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(question_mark);
+	_advance();
+
+	std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+	_parse_expression(expression);
+	p_parent->add_child(expression);
+
+	if (current_token != TK_COLON)
+	{
+		_error("expected ':' but found '" + lexer.get_token_value() + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> colon = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(colon);
+	_advance();
+
+	std::unique_ptr<TreeNode<Node>> next = _make_node(TYPE_CONDITIONAL_EXPRESSION, "");
+	_parse_conditional_expression(next);
+	p_parent->add_child(next);
+}
+
+void Parser::_parse_logical_or_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> logical_and = _make_node(TYPE_LOGICAL_AND_EXPRESSION, "");
+	_parse_logical_and_expression(logical_and);
+	p_parent->add_child(logical_and);
+
+	if (current_token != TK_OR)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> logic_or = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(logic_or);
+	_advance();
+
+	_parse_logical_or_expression(p_parent);
+}
+
+void Parser::_parse_logical_and_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> inclusive_or = _make_node(TYPE_INCLUSIVE_OR_EXPRESSION, "");
+	_parse_inclusive_or_expression(inclusive_or);
+	p_parent->add_child(inclusive_or);
+
+	if (current_token != TK_AND)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> logic_and = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(logic_and);
+	_advance();
+
+	_parse_logical_and_expression(p_parent);
+}
+
+void Parser::_parse_inclusive_or_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> exclusive_or = _make_node(TYPE_EXCLUSIVE_OR_EXPRESSION, "");
+	_parse_exclusive_or_expression(exclusive_or);
+	p_parent->add_child(exclusive_or);
+
+	if (current_token != TK_BIT_OR)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> bit_or = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(bit_or);
+	_advance();
+
+	_parse_inclusive_or_expression(p_parent);
+}
+
+void Parser::_parse_exclusive_or_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> and_expression = _make_node(TYPE_AND_EXPRESSION, "");
+	_parse_and_expression(and_expression);
+	p_parent->add_child(and_expression);
+
+	if (current_token != TK_BIT_XOR)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> bit_xor = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(bit_xor);
+	_advance();
+
+	_parse_exclusive_or_expression(p_parent);
+}
+
+void Parser::_parse_and_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> equality_expression = _make_node(TYPE_EQUALITY_EXPRESSION, "");
+	_parse_equality_expression(equality_expression);
+	p_parent->add_child(equality_expression);
+
+	if (current_token != TK_BIT_AND)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> bit_and = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(bit_and);
+	_advance();
+
+	_parse_and_expression(p_parent);
+}
+
+void Parser::_parse_equality_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> relational_expression = _make_node(TYPE_RELATIONAL_EXPRESSION, "");
+	_parse_relational_expression(relational_expression);
+	p_parent->add_child(relational_expression);
+
+	if (current_token != TK_EQUAL && current_token != TK_NOT_EQUAL)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> equals = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(equals);
+	_advance();
+
+	_parse_equality_expression(p_parent);
+}
+
+void Parser::_parse_relational_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> shift_expression = _make_node(TYPE_SHIFT_EXPRESSION, "");
+	_parse_shift_expression(shift_expression);
+	p_parent->add_child(shift_expression);
+
+	if (
+		current_token != TK_LESS_THAN && current_token != TK_LESS_THAN_EQUAL &&
+		current_token != TK_GREATER_THAN && current_token != TK_GREATER_THAN_EQUAL
+	) {
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> relational = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(relational);
+	_advance();
+
+	_parse_relational_expression(p_parent);
+}
+
+void Parser::_parse_shift_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> additive_expression = _make_node(TYPE_ADDITIVE_EXPRESSION, "");
+	_parse_additive_expression(additive_expression);
+	p_parent->add_child(additive_expression);
+
+	if (current_token != TK_BIT_SHIFT_LEFT && current_token != TK_ASSIGN_BIT_SHIFT_RIGHT)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> shift = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(shift);
+	_advance();
+
+	_parse_shift_expression(p_parent);
+}
+
+void Parser::_parse_additive_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> multi_expression = _make_node(TYPE_MULTIPLICITIVE_EXPRESSION, "");
+	_parse_multiplicative_expression(multi_expression);
+	p_parent->add_child(multi_expression);
+
+	if (current_token != TK_PLUS && current_token != TK_MINUS)
+	{
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> additive = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(additive);
+	_advance();
+
+	_parse_additive_expression(p_parent);
+}
+
+void Parser::_parse_multiplicative_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> cast_expression = _make_node(TYPE_CAST_EXPRESSION, "");
+	_parse_cast_expression(cast_expression);
+	p_parent->add_child(cast_expression);
+
+	if (
+			current_token != TK_ASSIGN_MULTIPLICATION &&
+			current_token != TK_DIVIDE &&
+			current_token != TK_ASSIGN_MODULO
+	) {
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> multiplicative = _make_node(
+				current_token,
+				lexer.get_token_value(),
+				current_token
+	);
+	p_parent->add_child(multiplicative);
+	_advance();
+
+	_parse_multiplicative_expression(p_parent);
+}
+
+void Parser::_parse_cast_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+		// TODO: add casting
+		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_UNARARY_EXPRESSION, "");
+		_parse_unary_expression(node);
+		p_parent->add_child(node);
+}
+
+void Parser::_parse_unary_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	// TODO:
+	// ++
+	// --
+	// sizeof
+	if (UnaryOperators.count(current_token))
+	{
+		std::unique_ptr<TreeNode<Node>> unary_op = _make_node(
+					TYPE_UNARY_OPERATOR,
+					lexer.get_token_value(),
+					lexer.get_token()
+		);
+		p_parent->add_child(unary_op);
+		_advance();
+
+		std::unique_ptr<TreeNode<Node>> cast_expression = _make_node(TYPE_CAST_EXPRESSION, "");
+		_parse_cast_expression(cast_expression);
+		p_parent->add_child(cast_expression);
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> primary_expression = _make_node(TYPE_POSTFIX_EXPRESSION, "");
+	_parse_postfix_expression(primary_expression);
+	p_parent->add_child(primary_expression);
+}
+
+void Parser::_parse_postfix_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> primary_expression = _make_node(TYPE_PRIMARY_EXPRESSION, "");
+	_parse_primary_expression(primary_expression);
+	p_parent->add_child(primary_expression);
+}
+
+void Parser::_parse_primary_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	switch (current_token) {
+		case TK_IDENTIFIER:
+		{
+			std::unique_ptr<TreeNode<Node>> indentifier = _make_node(
+						TYPE_IDENTIFIER,
+						lexer.get_token_value(),
+						TK_IDENTIFIER
+			);
+			p_parent->add_child(indentifier);
+			_advance();
+			return;
+		} break;
+		case TK_CONSTANT:
+		{
+			std::unique_ptr<TreeNode<Node>> constant = _make_node(
+						TYPE_CONSTANT,
+						lexer.get_token_value(),
+						TK_CONSTANT
+			);
+			p_parent->add_child(constant);
+			_advance();
+			return;
+		} break;
+		/* TODO: strings */
+		case TK_PARENTHESIS_OPEN:
+		{
+			std::unique_ptr<TreeNode<Node>> open_parenthesis = _make_node(
+						TK_PARENTHESIS_OPEN,
+						lexer.get_token_value(),
+						TK_PARENTHESIS_OPEN
+			);
+			p_parent->add_child(open_parenthesis);
+			_advance();
+
+			std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+			_parse_expression(expression);
+			p_parent->add_child(expression);
+
+			if (current_token != TK_PARENTHESIS_CLOSE)
+			{
+				_error("expected ')' but found: '" + lexer.get_token_value() + "'");
+			}
+
+			std::unique_ptr<TreeNode<Node>> close_parenthesis = _make_node(
+						TK_PARENTHESIS_CLOSE,
+						lexer.get_token_value(),
+						TK_PARENTHESIS_CLOSE
+			);
+			p_parent->add_child(close_parenthesis);
+			_advance();
+			return;
+		} break;
+	}
+
+	_error("expected primary expression but found: '" + token_to_string.at(current_token) + "'");
 }
 
 Parser::Parser()
