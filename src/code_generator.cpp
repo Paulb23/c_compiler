@@ -147,12 +147,46 @@ void CodeGenerator::_generate_code_block()
 	if (current_node.type == TK_RETURN)
 	{
 		_advance();
-		if (current_node.type == TYPE_CONSTANT)
+		if (current_node.type == TYPE_EXPRESSION)
 		{
-			_append_line("  movl $" + current_node.value + ",%eax");
+			_generate_expression();
 		}
 		_append_line("  ret");
 	}
+}
+
+void CodeGenerator::_generate_expression()
+{
+	/*
+	 * Use a stack based system
+	 */
+	while (current_node.type != TK_SEMICOLON)
+	{
+		_advance();
+		if (current_node.type == TK_CONSTANT)
+		{
+			_append_line("  pushl $" + current_node.value);
+			continue;
+		}
+
+		_append_line("  popl %eax");
+		_append_line("  popl %ebx");
+
+		switch (current_node.type)
+		{
+			case TK_PLUS:
+			{
+				_append_line("  addl %ebx,%eax");
+			} break;
+			case TK_STAR:
+			{
+				_append_line("  mull %ebx,%eax");
+			} break;
+		}
+
+		_append_line("  pushl %eax");
+	}
+	_append_line("  popl %eax");
 }
 
 CodeGenerator::CodeGenerator()

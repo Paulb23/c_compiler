@@ -139,6 +139,45 @@ void Assembler::_generate_text(const std::string &p_input_file)
 					_error("expected ':' but found '" + node.value + "'");
 				}
 			} break;
+			case TK_PUSH:
+			{
+				node = _advance();
+				switch (node.type)
+				{
+					case TK_CONSTANT:
+					{
+						/* Push Word, Doubleword or Quadword Onto the Stack */
+						text.push_back(0x68);
+						_push_int(text, std::stoi(node.value));
+					} break;
+					case TK_REGISTER:
+					{
+						text.push_back(_get_push_register_opcode(node.value));
+					} break;
+				}
+			} break;
+			case TK_POP:
+			{
+				node = _advance();
+				text.push_back(_get_pop_register_opcode(node.value));
+			} break;
+			case TK_ADD:
+			{
+				node = _advance();
+				node = _advance();
+				node = _advance();
+				text.push_back(0x01);
+				text.push_back(0xd8);
+			} break;
+			case TK_MUL:
+			{
+				node = _advance();
+				node = _advance();
+				node = _advance();
+				text.push_back(0x0f);
+				text.push_back(0xaf);
+				text.push_back(0xc3);
+			} break;
 			case TK_MOV:
 			{
 				node = _advance();
@@ -166,7 +205,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			} break;
 		}
 
-		std::cout << token_to_string.at(node.type) << " " << token_to_string.at(node.op) << " " << node.value << std::endl;
+		//std::cout << token_to_string.at(node.type) << " " << token_to_string.at(node.op) << " " << node.value << std::endl;
 		node = _advance();
 	}
 
@@ -198,6 +237,28 @@ char Assembler::_get_mov_register_opcode(const std::string &p_register)
 	}
 
 	std::cout << "error: move register '" << p_register << "' not reconized" << std::endl;
+	return 0x0;
+}
+
+char Assembler::_get_push_register_opcode(const std::string &p_register)
+{
+	if (push_register_opcodes.count(p_register) > 0)
+	{
+		return push_register_opcodes.at(p_register);
+	}
+
+	std::cout << "error: push register '" << p_register << "' not reconized" << std::endl;
+	return 0x0;
+}
+
+char Assembler::_get_pop_register_opcode(const std::string &p_register)
+{
+	if (pop_register_opcodes.count(p_register) > 0)
+	{
+		return pop_register_opcodes.at(p_register);
+	}
+
+	std::cout << "error: pop register '" << p_register << "' not reconized" << std::endl;
 	return 0x0;
 }
 
@@ -382,6 +443,26 @@ Assembler::Node Assembler::_advance()
 						_error("expected identifier, but found: '" + token_to_string.at(value.type) + "'" );
 					}
 					return _make_node(TK_GLOB, value.value);
+				}
+
+				if (word.find("push") == 0)
+				{
+					return _make_node(TK_PUSH, word, _get_op_type(word));
+				}
+
+				if (word.find("pop") == 0)
+				{
+					return _make_node(TK_POP, word, _get_op_type(word));
+				}
+
+				if (word.find("add") == 0)
+				{
+					return _make_node(TK_ADD, word, _get_op_type(word));
+				}
+
+				if (word.find("mul") == 0)
+				{
+					return _make_node(TK_MUL, word, _get_op_type(word));
 				}
 
 				if (word.find("mov") == 0)

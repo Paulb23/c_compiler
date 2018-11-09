@@ -208,6 +208,12 @@ enum Token
 	TK_LABEL,
 	TK_MOV,
 	TK_RET,
+
+	TK_PUSH,
+	TK_POP,
+
+	TK_ADD,
+	TK_MUL
 };
 
 const std::unordered_map<Token, std::string> token_to_string
@@ -395,8 +401,23 @@ const std::unordered_map<Token, std::string> token_to_string
 	{ TK_GLOB, "GLOB"},
 	{ TK_LABEL, "LABEL"},
 	{ TK_MOV, "MOV"},
-	{ TK_RET, "RET"}
+	{ TK_RET, "RET"},
+
+	{ TK_PUSH, "PUSH"},
+	{ TK_POP, "POP"},
+
+	{ TK_ADD, "ADD"},
+	{ TK_MUL, "MUL"}
 };
 
+const std::unordered_map<Token, int> op_precedence
+{
+	{TK_STAR, 3},
+	{TK_DIVIDE, 3},
+	{TK_MODULO, 3},
+
+	{TK_PLUS, 4},
+	{TK_MINUS, 4},
+};
 
 #endif // TOKENS_H

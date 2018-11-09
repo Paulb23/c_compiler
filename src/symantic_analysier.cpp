@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include <stack>
+#include <queue>
 
 std::unique_ptr<TreeNode<SymanticAnalysier::Node>> SymanticAnalysier::analyise(
 		const std::unique_ptr<TreeNode<Parser::Node>> &parse_tree
@@ -207,12 +208,8 @@ void SymanticAnalysier::_analyse_code_block(
 						std::unique_ptr<TreeNode<Node>> return_node = _make_node(TK_RETURN, current_node.value);
 
 						_advance();
-						if (current_node.type == TYPE_CONSTANT)
-						{
-							std::unique_ptr<TreeNode<Node>> constant = _make_node(TYPE_CONSTANT, current_node.value);
-							return_node->add_child(constant);
-						}
-						_advance();
+						_analyse_expression(return_node);
+
 						p_parent->add_child(return_node);
 					} break;
 				}
@@ -227,6 +224,78 @@ void SymanticAnalysier::_analyse_code_block(
 	}
 }
 
+void SymanticAnalysier::_analyse_expression(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	/*
+	 * Use shunting yard to convert infix to postfix.
+	 *
+	 * However we need a queue instead of a stack as
+	 * the nodes are added to the tree in reverse order
+	 */
+	std::queue<Parser::Node> output_queue;
+	std::stack<Parser::Node> op_stack;
+
+	while (current_node.token != TK_SEMICOLON)
+	{
+		/* constants and basic operators for now */
+		if (current_node.token == TK_CONSTANT)
+		{
+			output_queue.push(current_node);
+			_advance();
+			continue;
+		}
+
+		if (!op_precedence.count(current_node.token))
+		{
+			_advance();
+			continue;
+		}
+
+		if (op_stack.empty())
+		{
+			op_stack.push(current_node);
+			_advance();
+			continue;
+		}
+
+		while (!op_stack.empty())
+		{
+			if (op_precedence.at(op_stack.top().token) < op_precedence.at(current_node.token))
+			{
+				output_queue.push(op_stack.top());
+				op_stack.pop();
+			}
+			else
+			{
+				break;
+			}
+		}
+		op_stack.push(current_node);
+		_advance();
+	}
+
+	while (!op_stack.empty())
+	{
+		output_queue.push(op_stack.top());
+		op_stack.pop();
+	}
+
+	/*
+	 * Build the tree
+	 */
+	std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+	while (!output_queue.empty())
+	{
+		Parser::Node top = output_queue.front();
+		std::unique_ptr<TreeNode<Node>> child = _make_node(top.token, top.value);
+		output_queue.pop();
+		expression->add_child(child);
+	}
+	std::unique_ptr<TreeNode<Node>> semi_colon = _make_node(TK_SEMICOLON, ";");
+	expression->add_child(semi_colon);
+	p_parent->add_child(expression);
+}
 
 SymanticAnalysier::SymanticAnalysier()
 {

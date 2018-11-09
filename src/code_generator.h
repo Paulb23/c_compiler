@@ -59,6 +59,7 @@ private:
 	void _generate_program();
 	void _generate_function();
 	void _generate_code_block();
+	void _generate_expression();
 
 public:
 	void generate_code(

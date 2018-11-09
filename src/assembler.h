@@ -55,6 +55,18 @@ private:
 		{"edi", 0xbf}
 	};
 
+	const std::unordered_map<std::string, unsigned char> push_register_opcodes
+	{
+		{"eax", 0x50},
+		{"ebx", 0x53}
+	};
+
+	const std::unordered_map<std::string, unsigned char> pop_register_opcodes
+	{
+		{"eax", 0x58},
+		{"ebx", 0x5b}
+	};
+
 #define TEXT_ADDR  0x40000078
 
 	Elf64_Ehdr header;
@@ -69,6 +81,8 @@ private:
 	void _generate_text(const std::string &p_input_file);
 
 	char _get_mov_register_opcode(const std::string &p_register);
+	char _get_push_register_opcode(const std::string &p_register);
+	char _get_pop_register_opcode(const std::string &p_register);
 
 	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
 	void _push_string(std::vector<unsigned char> &p_vector, std::string p_string);
