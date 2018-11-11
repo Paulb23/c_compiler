@@ -146,37 +146,53 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				{
 					case TK_CONSTANT:
 					{
-						/* Push Word, Doubleword or Quadword Onto the Stack */
-						text.push_back(0x68);
-						_push_int(text, std::stoi(node.value));
+						Argument value{node.type, node.value};
+						_push_opcode("push_imm", value);
 					} break;
 					case TK_REGISTER:
 					{
-						text.push_back(_get_push_register_opcode(node.value));
+						_push_opcode("push_" + node.value);
+					} break;
+					default:
+					{
+						_error("expected constant or register but found '" + node.value + "'");
 					} break;
 				}
 			} break;
 			case TK_POP:
 			{
 				node = _advance();
-				text.push_back(_get_pop_register_opcode(node.value));
+				if (node.type != TK_REGISTER)
+				{
+					_error("expected register but found '" + node.value + "'");
+				}
+				_push_opcode("pop_" + node.value);
 			} break;
 			case TK_ADD:
 			{
 				node = _advance();
+				Argument source{node.type, node.value};
+
+				/* skip comma */
 				node = _advance();
+
 				node = _advance();
-				text.push_back(0x01);
-				text.push_back(0xd8);
+				Argument destination{node.type, node.value};
+
+				_push_opcode("add", source, destination);
 			} break;
 			case TK_MUL:
 			{
 				node = _advance();
+				Argument source{node.type, node.value};
+
+				/* skip comma */
 				node = _advance();
+
 				node = _advance();
-				text.push_back(0x0f);
-				text.push_back(0xaf);
-				text.push_back(0xc3);
+				Argument destination{node.type, node.value};
+
+				_push_opcode("mul", source, destination);
 			} break;
 			case TK_MOV:
 			{
@@ -191,7 +207,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				switch (node.type) {
 					case TK_REGISTER:
 					{
-						text.push_back(_get_mov_register_opcode(node.value));
+						//text.push_back(_get_mov_register_opcode(node.value));
 					} break;
 				}
 
@@ -229,37 +245,87 @@ void Assembler::_generate_text(const std::string &p_input_file)
 	text.push_back(0x05);
 }
 
-char Assembler::_get_mov_register_opcode(const std::string &p_register)
-{
-	if (mov_register_opcodes.count(p_register) > 0)
+void Assembler::_push_opcode(
+		std::string p_mnemonic,
+		Argument p_source,
+		Argument p_destination
+) {
+	/*
+	 *                           operand
+	 *  prefix  | opcode d s | MOD REG R/M | immediate
+	 * 00000000 | 000000 0 0 | 00  000 000 | 00000000
+	 */
+	bool has_prefix = false;
+	bool has_operand = false;
+	bool has_immediate = false;
+
+	unsigned char prefix;
+	if (prefix_opcodes.count(p_mnemonic))
 	{
-		return mov_register_opcodes.at(p_register);
+		has_prefix = true;
+		prefix = prefix_opcodes.at(p_mnemonic);
 	}
 
-	std::cout << "error: move register '" << p_register << "' not reconized" << std::endl;
-	return 0x0;
-}
+	unsigned char opcode = op_opcodes.at(p_mnemonic);
 
-char Assembler::_get_push_register_opcode(const std::string &p_register)
-{
-	if (push_register_opcodes.count(p_register) > 0)
+	unsigned char operand;
+	std::vector<unsigned char> immediate;
+	if (p_source.type != NONE || p_destination.type != NONE)
 	{
-		return push_register_opcodes.at(p_register);
+
+		if (p_source.type == TK_CONSTANT)
+		{
+			has_immediate = true;
+			_push_int(immediate, std::stoi(p_source.value));
+		}
+		else
+		{
+			has_operand = true;
+			operand = 0x00;
+			bool source_is_dest = (opcode & 2) != 0;
+			Argument reg = source_is_dest ? p_destination : p_source;
+			Argument rm =  source_is_dest ? p_source : p_destination;
+
+			unsigned char mod = 0x00;
+			if (rm.type == TK_REGISTER)
+			{
+				mod = REGISTER_ADRESSING;
+			}
+			else
+			{
+				mod = FOUR_BYTE_DISPLACEMENT;
+			}
+			operand |= mod;
+
+			operand |= register_values.at(reg.value) << 3;
+
+			if (mod == REGISTER_ADRESSING)
+			{
+				operand |= register_values.at(rm.value);
+			}
+		}
 	}
 
-	std::cout << "error: push register '" << p_register << "' not reconized" << std::endl;
-	return 0x0;
-}
-
-char Assembler::_get_pop_register_opcode(const std::string &p_register)
-{
-	if (pop_register_opcodes.count(p_register) > 0)
+	if (has_prefix)
 	{
-		return pop_register_opcodes.at(p_register);
+		text.push_back(prefix);
 	}
 
-	std::cout << "error: pop register '" << p_register << "' not reconized" << std::endl;
-	return 0x0;
+	text.push_back(opcode);
+
+	if (has_operand)
+	{
+		text.push_back(operand);
+	}
+
+	if (has_immediate)
+	{
+		for (unsigned char c : immediate)
+		{
+			text.push_back(c);
+		}
+	}
+
 }
 
 void Assembler::_push_int(std::vector<unsigned char> &p_vector, int p_value)

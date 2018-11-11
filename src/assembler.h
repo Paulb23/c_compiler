@@ -38,34 +38,63 @@
 class Assembler
 {
 private:
+	const std::unordered_map<std::string, unsigned char> prefix_opcodes
+	{
+		{"mul", 0x0F},
+	};
+
 	const std::unordered_map<std::string, unsigned char> op_opcodes
 	{
+		{"add", 0x01},
+
+		{"push_eax", 0x50},
+		{"push_ecx", 0x51},
+		{"push_edx", 0x52},
+		{"push_ebx", 0x53},
+		{"push_esp", 0x54},
+		{"push_ebp", 0x55},
+		{"push_esi", 0x56},
+		{"push_esi", 0x57},
+		{"push_imm", 0x68},
+
+		{"pop_eax", 0x58},
+		{"pop_ecx", 0x59},
+		{"pop_edx", 0x5A},
+		{"pop_ebx", 0x5B},
+		{"pop_esp", 0x5C},
+		{"pop_ebp", 0x5D},
+		{"pop_esi", 0x5E},
+		{"pop_esi", 0x5F},
+
+		{"mul", 0xAF},
 		{"ret", 0xc3}
 	};
 
-	const std::unordered_map<std::string, unsigned char> mov_register_opcodes
+	const std::unordered_map<std::string, unsigned char> register_values
 	{
-		{"eax", 0xb8},
-		{"ebx", 0xbb},
-		{"ecx", 0xb9},
-		{"edx", 0xba},
-		{"esp", 0xbc},
-		{"ebp", 0xbd},
-		{"esl", 0xbe},
-		{"edi", 0xbf}
+		{"eax", 0x00},
+		{"ecx", 0x01},
+		{"edx", 0x02},
+		{"ebx", 0x03},
+		{"esp", 0x04},
+		{"ebp", 0x05},
+		{"esi", 0x06},
+		{"edi", 0x07}
 	};
 
-	const std::unordered_map<std::string, unsigned char> push_register_opcodes
+	enum Mod
 	{
-		{"eax", 0x50},
-		{"ebx", 0x53}
+		REGISTER_INDIRECT_ADRESSING = 0x00,
+		ONE_BYTE_DISPLACEMENT = 0x40,
+		FOUR_BYTE_DISPLACEMENT = 0x80,
+		REGISTER_ADRESSING = 0xC0
 	};
 
-	const std::unordered_map<std::string, unsigned char> pop_register_opcodes
+	typedef struct Argument
 	{
-		{"eax", 0x58},
-		{"ebx", 0x5b}
-	};
+		const Token type;
+		const std::string value;
+	} Argument;
 
 #define TEXT_ADDR  0x40000078
 
@@ -80,9 +109,11 @@ private:
 	void _generate_program_header();
 	void _generate_text(const std::string &p_input_file);
 
-	char _get_mov_register_opcode(const std::string &p_register);
-	char _get_push_register_opcode(const std::string &p_register);
-	char _get_pop_register_opcode(const std::string &p_register);
+	void _push_opcode(
+			std::string p_mnemonic,
+			Argument p_source = {NONE, ""},
+			Argument p_destination = {NONE, ""}
+	);
 
 	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
 	void _push_string(std::vector<unsigned char> &p_vector, std::string p_string);
