@@ -177,6 +177,20 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
+	void _parse_pointer(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_type_qualifier_list(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_type_qualifier(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
 	void _parse_direct_declarator(
 			std::unique_ptr<TreeNode<Node>> &p_parent,
 			bool required = true
@@ -194,6 +208,10 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
+	void _parse_selection_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
 	void _parse_jump_statement(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
@@ -203,7 +221,8 @@ private:
 	);
 
 	void _parse_assignment_expression(
-			std::unique_ptr<TreeNode<Node>> &p_parent
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool check_unary = false
 	);
 
 	void _parse_conditional_expression(

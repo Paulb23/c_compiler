@@ -250,12 +250,75 @@ void Parser::_parse_declarator(
 ) {
 	if (current_token == TK_STAR)
 	{
-		//TODO: _parse_pointer();
+		std::unique_ptr<TreeNode<Node>> pointer_node = _make_node(TYPE_POINTER, "");
+		_parse_pointer(pointer_node);
+		p_parent->add_child(pointer_node);
 	}
 
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_DIRECT_DECLARATOR, "");
 	_parse_direct_declarator(node);
 	p_parent->add_child(node);
+}
+
+
+void Parser::_parse_pointer(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+
+	if (current_token != TK_STAR)
+	{
+		_error("expected '*' but found '" + lexer.get_token_value()  + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> star_node = _make_node(TK_STAR, lexer.get_token_value());
+	p_parent->add_child(star_node);
+	_advance();
+
+	std::unique_ptr<TreeNode<Node>> qualifier_list = _make_node(TYPE_QUALIFIER_LIST, "");
+	_parse_type_qualifier_list(qualifier_list, false);
+	p_parent->add_child(qualifier_list);
+
+	if (current_token == TK_STAR)
+	{
+		_parse_pointer(p_parent);
+	}
+}
+
+void Parser::_parse_type_qualifier_list(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
+) {
+	if (required && !TypeQualifiers.count(current_token))
+	{
+		_error("expected type qualifier but found '" + token_to_string.at(current_token) + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> type_qualifier = _make_node(TYPE_TYPE_QUALIFIER, "");
+	_parse_type_qualifier_list(type_qualifier);
+	p_parent->add_child(type_qualifier);
+
+	if (TypeQualifiers.count(current_token))
+	{
+		_parse_type_qualifier_list(p_parent, false);
+	}
+}
+
+void Parser::_parse_type_qualifier(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
+) {
+	if (!TypeQualifiers.count(current_token))
+	{
+		if (required)
+		{
+			_error("expected qualifier but found '" + token_to_string.at(current_token) + "'");
+		}
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> node = _make_node(current_token, lexer.get_token_value());
+	p_parent->add_child(node);
+	_advance();
 }
 
 void Parser::_parse_direct_declarator(
@@ -326,18 +389,81 @@ void Parser::_parse_block_item_list(
 		std::unique_ptr<TreeNode<Node>> &p_parent
 ) {
 	// just parse statments for now...
-	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_STATEMENT, "");;
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_STATEMENT, "");
 	_parse_statement(node);
 	p_parent->add_child(node);
+
+	if (current_token != TK_BRACE_CLOSE)
+	{
+		_parse_block_item_list(p_parent);
+	}
 }
 
 void Parser::_parse_statement(
 		std::unique_ptr<TreeNode<Node>> &p_parent
 ) {
-	// just jump statments..
-	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");;
+	if (current_token == TK_IF || current_token == TK_SWITCH)
+	{
+		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_SELECTION_STATMENT, "");
+		_parse_selection_statement(node);
+		p_parent->add_child(node);
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");
 	_parse_jump_statement(node);
 	p_parent->add_child(node);
+}
+
+void Parser::_parse_selection_statement(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	if (current_token != TK_IF && current_token != TK_SWITCH)
+	{
+		_error("expected 'if' or 'switch' but found '" + lexer.get_token_value() + "'");
+	}
+
+	Token type_token = current_token;
+	std::unique_ptr<TreeNode<Node>> type = _make_node(current_token, lexer.get_token_value());
+	p_parent->add_child(type);
+	_advance();
+
+	if (current_token != TK_PARENTHESIS_OPEN)
+	{
+		_error("expected '(' but found '" + lexer.get_token_value() + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> open_paren = _make_node(TK_PARENTHESIS_OPEN, lexer.get_token_value());
+	p_parent->add_child(open_paren);
+	_advance();
+
+	std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+	_parse_expression(expression);
+	p_parent->add_child(expression);
+
+	if (current_token != TK_PARENTHESIS_CLOSE)
+	{
+		_error("expected ')' but found '" + lexer.get_token_value() + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> close_paren = _make_node(TK_PARENTHESIS_CLOSE, lexer.get_token_value());
+	p_parent->add_child(close_paren);
+	_advance();
+
+	std::unique_ptr<TreeNode<Node>> statement = _make_node(TYPE_STATEMENT, "");
+	_parse_statement(statement);
+	p_parent->add_child(statement);
+
+	if (type_token == TK_IF && current_token == TK_ELSE)
+	{
+		std::unique_ptr<TreeNode<Node>> else_op = _make_node(TK_ELSE, lexer.get_token_value());
+		p_parent->add_child(else_op);
+		_advance();
+
+		std::unique_ptr<TreeNode<Node>> else_statement = _make_node(TYPE_STATEMENT, "");
+		_parse_statement(else_statement);
+		p_parent->add_child(else_statement);
+	}
 }
 
 void Parser::_parse_jump_statement(
@@ -373,7 +499,7 @@ void Parser::_parse_expression(
 ) {
 
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_ASSIGNMENT_EXPRESSION, "");
-	_parse_assignment_expression(node);
+	_parse_assignment_expression(node, true);
 	p_parent->add_child(node);
 
 	if (current_token != TK_COMMA)
@@ -392,9 +518,28 @@ void Parser::_parse_expression(
 }
 
 void Parser::_parse_assignment_expression(
-		std::unique_ptr<TreeNode<Node>> &p_parent
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool check_unary
 ) {
-	//TODO: unary expression
+	if (check_unary && UnaryOperators.count(current_token))
+	{
+		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_UNARARY_EXPRESSION, "");
+		_parse_unary_expression(node);
+		p_parent->add_child(node);
+
+		if (AssignmentOperators.count(current_token))
+		{
+			_error("expected assignment but found '" + token_to_string.at(current_token) + "'");
+		}
+
+		std::unique_ptr<TreeNode<Node>> assignment_op_node = _make_node(TYPE_ASSIGNMENT_OPERATOR, lexer.get_token_value());
+		p_parent->add_child(assignment_op_node);
+		_advance();
+
+		_parse_assignment_expression(p_parent);
+		return;
+	}
+
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_CONDITIONAL_EXPRESSION, "");
 	_parse_conditional_expression(node);
 
