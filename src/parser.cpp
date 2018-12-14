@@ -418,6 +418,14 @@ void Parser::_parse_statement(
 		return;
 	}
 
+	if (current_token == TK_BRACE_OPEN)
+	{
+		std::unique_ptr<TreeNode<Node>> compound_statement = _make_node(TYPE_COMPOUND_STATEMENT, "");
+		_parse_compound_statment(compound_statement);
+		p_parent->add_child(compound_statement);
+		return;
+	}
+
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");
 	_parse_jump_statement(node);
 	p_parent->add_child(node);

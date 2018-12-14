@@ -14,7 +14,9 @@ int main()
 	goto a;
 
 	while(12)
+	{
 		return 1;
+	}
 
 	do
 		return 1;
