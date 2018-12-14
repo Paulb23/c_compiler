@@ -8,6 +8,21 @@ int main()
     return 1;
 	else if (12)
 	return 1;
+
+	break;
+	continue;
+	goto a;
+
+	while(12)
+		return 1;
+
+	do
+		return 1;
+	while (12);
+
+	for (12;12;12)
+		return 1;
+
     // return 7
-	return !12 + 2*3+1;
+	return 12 + 2*3+1;
 }

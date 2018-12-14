@@ -410,6 +410,14 @@ void Parser::_parse_statement(
 		return;
 	}
 
+	if (current_token == TK_FOR || current_token == TK_DO || current_token == TK_WHILE)
+	{
+		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_ITERATION_STATMENT, "");
+		_parse_iteration_statement(node);
+		p_parent->add_child(node);
+		return;
+	}
+
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");
 	_parse_jump_statement(node);
 	p_parent->add_child(node);
@@ -466,12 +474,138 @@ void Parser::_parse_selection_statement(
 	}
 }
 
+void Parser::_parse_iteration_statement(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	if (current_token != TK_FOR && current_token != TK_DO && current_token != TK_WHILE)
+	{
+		_error("expected 'for','do' or 'while' but found '" + lexer.get_token_value() + "'");
+	}
+
+	Token type_token = current_token;
+	std::unique_ptr<TreeNode<Node>> type = _make_node(current_token, lexer.get_token_value());
+	p_parent->add_child(type);
+	_advance();
+
+	if (type_token == TK_DO)
+	{
+		std::unique_ptr<TreeNode<Node>> do_statment = _make_node(TYPE_STATEMENT, "");
+		_parse_statement(do_statment);
+		p_parent->add_child(do_statment);
+
+		if (current_token != TK_WHILE)
+		{
+			_error("expected 'while' but found '" + token_to_string.at(current_token) + "'");
+		}
+
+		std::unique_ptr<TreeNode<Node>> while_statment = _make_node(TK_WHILE, lexer.get_token_value());
+		p_parent->add_child(while_statment);
+		_advance();
+	}
+
+	if (current_token != TK_PARENTHESIS_OPEN)
+	{
+		_error("expected '(' but found '" + lexer.get_token_value() + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> open_paren = _make_node(TK_PARENTHESIS_OPEN, lexer.get_token_value());
+	p_parent->add_child(open_paren);
+	_advance();
+
+	// TODO: handle declarations
+	// TODO: supports empty expressions
+	std::unique_ptr<TreeNode<Node>> main_expression = _make_node(TYPE_EXPRESSION, "");
+	_parse_expression(main_expression);
+	p_parent->add_child(main_expression);
+
+	if (type_token == TK_FOR)
+	{
+		if (current_token != TK_SEMICOLON)
+		{
+			_error("expected ';' but found '" + lexer.get_token_value() + "'");
+		}
+
+		std::unique_ptr<TreeNode<Node>> first_semicolon = _make_node(TK_SEMICOLON, lexer.get_token_value());
+		p_parent->add_child(first_semicolon);
+		_advance();
+
+		std::unique_ptr<TreeNode<Node>> second_expression = _make_node(TYPE_EXPRESSION, "");
+		_parse_expression(second_expression);
+		p_parent->add_child(second_expression);
+
+		if (current_token == TK_SEMICOLON)
+		{
+			std::unique_ptr<TreeNode<Node>> second_semicolon = _make_node(TK_SEMICOLON, lexer.get_token_value());
+			p_parent->add_child(second_semicolon);
+			_advance();
+
+
+			std::unique_ptr<TreeNode<Node>> third_expression = _make_node(TYPE_EXPRESSION, "");
+			_parse_expression(third_expression);
+			p_parent->add_child(third_expression);
+		}
+	}
+
+	if (current_token != TK_PARENTHESIS_CLOSE)
+	{
+		_error("expected ')' but found '" + lexer.get_token_value() + "'");
+	}
+
+	std::unique_ptr<TreeNode<Node>> close_paren = _make_node(TK_PARENTHESIS_CLOSE, lexer.get_token_value());
+	p_parent->add_child(close_paren);
+	_advance();
+
+	if (type_token == TK_DO)
+	{
+		if (current_token != TK_SEMICOLON)
+		{
+			_error("expected ';' but found '" + lexer.get_token_value() + "'");
+		}
+
+		std::unique_ptr<TreeNode<Node>> close_semicolon = _make_node(TK_SEMICOLON, lexer.get_token_value());
+		p_parent->add_child(close_semicolon);
+		_advance();
+		return;
+	}
+
+	std::unique_ptr<TreeNode<Node>> main_statment = _make_node(TYPE_STATEMENT, "");
+	_parse_statement(main_statment);
+	p_parent->add_child(main_statment);
+}
+
 void Parser::_parse_jump_statement(
 		std::unique_ptr<TreeNode<Node>> &p_parent
 ) {
 	std::unique_ptr<TreeNode<Node>> node = NULL;
-	// just returns...
-	if (current_token == TK_RETURN)
+	if (current_token == TK_GOTO)
+	{
+		node = _make_node(TK_GOTO, lexer.get_token_value(), TK_GOTO);
+		_advance();
+
+		if (current_token != TK_IDENTIFIER)
+		{
+			_error("expected identifier but found '" + token_to_string.at(current_token) + "'");
+		}
+
+		std::unique_ptr<TreeNode<Node>> identifier = _make_node(TYPE_IDENTIFIER, lexer.get_token_value());
+		node->add_child(identifier);
+		_advance();
+
+		p_parent->add_child(node);
+	}
+	else if (current_token == TK_CONTINUE)
+	{
+		node = _make_node(TK_CONTINUE, lexer.get_token_value(), TK_CONTINUE);
+		p_parent->add_child(node);
+		_advance();
+	}
+	else if (current_token == TK_BREAK)
+	{
+		node = _make_node(TK_BREAK, lexer.get_token_value(), TK_BREAK);
+		p_parent->add_child(node);
+		_advance();
+	}
+	else if (current_token == TK_RETURN)
 	{
 		node = _make_node(TK_RETURN, lexer.get_token_value(), TK_RETURN);
 		p_parent->add_child(node);
@@ -527,7 +661,7 @@ void Parser::_parse_assignment_expression(
 		_parse_unary_expression(node);
 		p_parent->add_child(node);
 
-		if (AssignmentOperators.count(current_token))
+		if (!AssignmentOperators.count(current_token))
 		{
 			_error("expected assignment but found '" + token_to_string.at(current_token) + "'");
 		}

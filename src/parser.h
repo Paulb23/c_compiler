@@ -212,6 +212,10 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
+	void _parse_iteration_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
 	void _parse_jump_statement(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
