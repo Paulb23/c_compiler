@@ -15,7 +15,6 @@ int main()
 
 	while(12)
 	{
-		return 1;
 	}
 
 	do

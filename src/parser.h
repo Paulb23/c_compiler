@@ -205,7 +205,8 @@ private:
 	);
 
 	void _parse_statement(
-			std::unique_ptr<TreeNode<Node>> &p_parent
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
 	);
 
 	void _parse_selection_statement(

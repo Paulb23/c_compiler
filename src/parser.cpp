@@ -390,7 +390,7 @@ void Parser::_parse_block_item_list(
 ) {
 	// just parse statments for now...
 	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_STATEMENT, "");
-	_parse_statement(node);
+	_parse_statement(node, false);
 	p_parent->add_child(node);
 
 	if (current_token != TK_BRACE_CLOSE)
@@ -400,7 +400,8 @@ void Parser::_parse_block_item_list(
 }
 
 void Parser::_parse_statement(
-		std::unique_ptr<TreeNode<Node>> &p_parent
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
 ) {
 	if (current_token == TK_IF || current_token == TK_SWITCH)
 	{
@@ -426,9 +427,22 @@ void Parser::_parse_statement(
 		return;
 	}
 
-	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");
-	_parse_jump_statement(node);
-	p_parent->add_child(node);
+	if (
+		current_token == TK_GOTO     ||
+		current_token == TK_CONTINUE ||
+		current_token == TK_BREAK    ||
+		current_token == TK_RETURN
+	) {
+		std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_JUMP_STATMENT, "");
+		_parse_jump_statement(node);
+		p_parent->add_child(node);
+		return;
+	}
+
+	if (required)
+	{
+		_error("un-reconised statemnt' " + lexer.get_token_value() + "'");
+	}
 }
 
 void Parser::_parse_selection_statement(
