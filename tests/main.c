@@ -8,7 +8,9 @@ int main()
     return 1;
 	else if (12)
 	return 1;
-
+	else
+	return 1;
+	
 	break;
 	continue;
 	goto a;

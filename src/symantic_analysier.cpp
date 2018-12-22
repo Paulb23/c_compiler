@@ -195,27 +195,16 @@ void SymanticAnalysier::_analyse_code_block(
 	{
 		/* hack this in for the mean time */
 		_advance();
-		switch (current_node.type)
+		while (current_node.type == TYPE_STATEMENT)
 		{
-			case TYPE_STATEMENT:
+			switch (current_node.type)
 			{
-				_advance();
-				_advance();
-				switch (current_node.type)
-				{
-					case TK_RETURN:
-					{
-						std::unique_ptr<TreeNode<Node>> return_node = _make_node(TK_RETURN, current_node.value);
-
-						_advance();
-						_analyse_expression(return_node);
-
-						p_parent->add_child(return_node);
-					} break;
-				}
-			} break;
+			    case TYPE_STATEMENT:
+			    {
+				    _analyse_statement(p_parent);
+			    } break;
+			}
 		}
-
 	}
 
 	if (current_node.type == TK_BRACE_CLOSE)
@@ -223,6 +212,136 @@ void SymanticAnalysier::_analyse_code_block(
 		return;
 	}
 }
+
+void SymanticAnalysier::_analyse_statement(
+        std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	_advance();
+	_advance();
+	switch (current_node.type)
+	{
+	    case TK_BRACE_OPEN: // compound statment work around for now...
+	    {
+		    _advance(); // {
+			_analyse_statement(p_parent);
+			_advance(); // }
+	    } break;
+	    case TK_IF:
+	    {
+		    std::unique_ptr<TreeNode<Node>> if_node = _make_node(TK_IF, current_node.value);
+
+			_advance(); // if
+			_advance(); // (
+			_analyse_expression(if_node);
+
+			std::unique_ptr<TreeNode<Node>> statment = _make_node(TYPE_STATEMENT, current_node.value);
+			_analyse_statement(statment);
+			if_node->add_child(statment);
+
+			if (current_node.type == TK_ELSE)
+			{
+				std::unique_ptr<TreeNode<Node>> else_node = _make_node(TK_ELSE, current_node.value);
+				_advance(); // else
+
+				_analyse_statement(else_node);
+				if_node->add_child(else_node);
+			}
+
+			p_parent->add_child(if_node);
+	    } break;
+	    case TK_WHILE:
+	    {
+		    std::unique_ptr<TreeNode<Node>> while_node = _make_node(TK_WHILE, current_node.value);
+
+			_advance(); // while
+			_advance(); // (
+			_analyse_expression(while_node);
+
+			std::unique_ptr<TreeNode<Node>> statment = _make_node(TYPE_STATEMENT, current_node.value);
+			_analyse_statement(statment);
+			while_node->add_child(statment);
+
+			p_parent->add_child(while_node);
+	    } break;
+	    case TK_DO:
+	    {
+		    std::unique_ptr<TreeNode<Node>> do_node = _make_node(TK_DO, current_node.value);
+
+			_advance(); // do
+
+			std::unique_ptr<TreeNode<Node>> statment = _make_node(TYPE_STATEMENT, current_node.value);
+			_analyse_statement(statment);
+			do_node->add_child(statment);
+
+			std::unique_ptr<TreeNode<Node>> while_node = _make_node(TK_WHILE, current_node.value);
+
+			_advance(); // while
+			_advance(); // (
+			_analyse_expression(while_node);
+			do_node->add_child(while_node);
+
+			p_parent->add_child(do_node);
+	    } break;
+	    case TK_FOR:
+	    {
+		    std::unique_ptr<TreeNode<Node>> for_node = _make_node(TK_FOR, current_node.value);
+
+			_advance(); // for
+			_advance(); // (
+
+			_analyse_expression(for_node);
+			_analyse_expression(for_node);
+			_analyse_expression(for_node);
+
+			std::unique_ptr<TreeNode<Node>> statment = _make_node(TYPE_STATEMENT, current_node.value);
+			_analyse_statement(statment);
+			for_node->add_child(statment);
+
+			p_parent->add_child(for_node);
+	    } break;
+	    case TK_BREAK:
+	    {
+		    std::unique_ptr<TreeNode<Node>> break_node = _make_node(TK_BREAK, current_node.value);
+			p_parent->add_child(break_node);
+
+			_advance(); // break
+			_advance(); // ;
+	    } break;
+	    case TK_CONTINUE:
+	    {
+		    std::unique_ptr<TreeNode<Node>> continue_node = _make_node(TK_CONTINUE, current_node.value);
+			p_parent->add_child(continue_node);
+
+			_advance(); // continue
+			_advance(); // ;
+	    } break;
+	    case TK_GOTO:
+	    {
+		    std::unique_ptr<TreeNode<Node>> goto_node = _make_node(TK_GOTO, current_node.value);
+
+			_advance(); // goto
+
+			std::unique_ptr<TreeNode<Node>> identifier_node = _make_node(TYPE_IDENTIFIER, current_node.value);
+			goto_node->add_child(identifier_node);
+
+			_advance(); // identifier
+			_advance(); // ;
+
+			p_parent->add_child(goto_node);
+
+	    } break;
+	    case TK_RETURN:
+	    {
+		    std::unique_ptr<TreeNode<Node>> return_node = _make_node(TK_RETURN, current_node.value);
+
+			_advance(); // return
+			_analyse_expression(return_node);
+
+			p_parent->add_child(return_node);
+	    } break;
+	}
+}
+
 
 void SymanticAnalysier::_analyse_expression(
 		std::unique_ptr<TreeNode<Node>> &p_parent
@@ -236,7 +355,7 @@ void SymanticAnalysier::_analyse_expression(
 	std::queue<Parser::Node> output_queue;
 	std::stack<Parser::Node> op_stack;
 
-	while (current_node.token != TK_SEMICOLON)
+	while (current_node.type != TK_SEMICOLON && current_node.type != TYPE_STATEMENT)
 	{
 		/* constants and basic operators for now */
 		if (current_node.token == TK_CONSTANT)
@@ -295,6 +414,11 @@ void SymanticAnalysier::_analyse_expression(
 	std::unique_ptr<TreeNode<Node>> semi_colon = _make_node(TK_SEMICOLON, ";");
 	expression->add_child(semi_colon);
 	p_parent->add_child(expression);
+
+	if (current_node.type == TK_SEMICOLON)
+	{
+		_advance();
+	}
 }
 
 SymanticAnalysier::SymanticAnalysier()

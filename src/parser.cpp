@@ -441,7 +441,7 @@ void Parser::_parse_statement(
 
 	if (required)
 	{
-		_error("un-reconised statemnt' " + lexer.get_token_value() + "'");
+		_error("un-reconised statment' " + lexer.get_token_value() + "'");
 	}
 }
 

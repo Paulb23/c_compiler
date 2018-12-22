@@ -85,6 +85,11 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
+	void _analyse_statement(
+	        std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+
 	void _analyse_expression(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
