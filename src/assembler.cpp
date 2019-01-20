@@ -56,8 +56,8 @@ void Assembler::assemble(
 
 	_generate_text(p_input_file);
 
-	text_program_header.p_filesz = sizeof(text);
-	text_program_header.p_memsz = sizeof(text);
+	text_program_header.p_filesz = text.size() * sizeof(unsigned char);
+	text_program_header.p_memsz = text.size() * sizeof(unsigned char);
 
 	std::ofstream file;
 	file.open(p_output_file);
