@@ -153,7 +153,7 @@ void SymanticAnalysier::_print_tree(
 
 void SymanticAnalysier::_advance()
 {
-	if (current_node_offset + 1 > tree_vector.size())
+	if (current_node_offset + 1 >= tree_vector.size())
 	{
 		return;
 	}
@@ -209,7 +209,7 @@ void SymanticAnalysier::_analyse_code_block(
 
 	if (current_node.type == TK_BRACE_CLOSE)
 	{
-		return;
+		_advance();
 	}
 }
 
@@ -217,14 +217,17 @@ void SymanticAnalysier::_analyse_statement(
         std::unique_ptr<TreeNode<Node>> &p_parent
 ) {
 	_advance();
+	// empty compound statment
+	if (current_node.type == TK_BRACE_CLOSE)
+	{
+		return;
+	}
 	_advance();
 	switch (current_node.type)
 	{
 	    case TK_BRACE_OPEN: // compound statment work around for now...
 	    {
-		    _advance(); // {
-			_analyse_statement(p_parent);
-			_advance(); // }
+			_analyse_code_block(p_parent);
 	    } break;
 	    case TK_IF:
 	    {
