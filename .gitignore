@@ -23,9 +23,13 @@
 # QT project files
 *.config
 *.creator
+*.creator.*
 *.files
 *.includes
 *.user
+*.cflags
+*.cxxflags
+
 
 # Build Output
 bin/
