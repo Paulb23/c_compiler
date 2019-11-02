@@ -166,7 +166,7 @@ Token Lexer::advance()
 					while (true)
 					{
 						const char &cc = _get_next_char();
-						if (cc == '0' || cc == '\r' || cc == '\n')
+						if (cc == '\0' || cc == '\r' || cc == '\n')
 						{
 							break;
 						}
@@ -187,7 +187,7 @@ Token Lexer::advance()
 							line++;
 						}
 
-						if (cc == '0' || (cc == '*' && _look_ahead(1) == '/'))
+						if (cc == '\0' || (cc == '*' && _look_ahead(1) == '/'))
 						{
 							_get_next_char();
 							break;
