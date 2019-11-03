@@ -1,16 +1,20 @@
+//result=1
 /*
  * this is a
  * multiline comment
  */
 int main()
 {
-	if (12)
-    return 1;
-	else if (12)
-	return 1;
+	if (1-1)
+		return 1-1;
+	else if(1)
+	return 2;
 	else
-	return 1;
+	return 3;
 	
+	if (12)
+		return 15;
+
 	break;
 	continue;
 	goto a;
@@ -27,5 +31,5 @@ int main()
 		return 1;
 
     // return 7
-	return 12 + 2*3+1;
+	return 12 + 2 * 3+1;
 }

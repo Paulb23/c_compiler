@@ -67,7 +67,11 @@ private:
 		{"pop_esi", 0x5F},
 
 		{"mul", 0xAF},
-		{"ret", 0xc3}
+		{"ret", 0xc3},
+
+		{"test",0x85},
+
+		{"jz", 0x74}
 	};
 
 	const std::unordered_map<std::string, unsigned char> register_values

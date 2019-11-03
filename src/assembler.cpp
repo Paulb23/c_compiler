@@ -122,6 +122,9 @@ void Assembler::_generate_text(const std::string &p_input_file)
 {
 	_load_assembly(p_input_file);
 
+	std::unordered_map<std::string, unsigned char> label_addresses;
+	std::unordered_map<int, std::string> pending_addresses;
+
 	Node node = _advance();
 	while (node.type != TK_EOF && node.type != TK_ERROR)
 	{
@@ -133,10 +136,59 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			} break;
 			case TK_IDENTIFIER:
 			{
+				if (!label_addresses.count(node.value))
+				{
+					unsigned int address = TEXT_ADDR + (text.size() * sizeof(unsigned char));
+					label_addresses[node.value] = address;
+
+					for (std::pair<int, std::string> jump : pending_addresses)
+					{
+						if (jump.second != node.value)
+						{
+							continue;
+						}
+
+						// TODO: off by 2???
+						unsigned char relative_address = (text.size() - jump.first) - 2;
+						text[jump.first + 1] = ((relative_address) & 0xFF);
+					}
+				}
+
 				node = _advance();
+
 				if (node.type != TK_COLON)
 				{
 					_error("expected ':' but found '" + node.value + "'");
+				}
+			} break;
+			case TK_TEST:
+			{
+				node = _advance();
+				Argument source{node.type, node.value};
+
+				/* skip comma */
+				node = _advance();
+
+				node = _advance();
+				Argument destination{node.type, node.value};
+
+				_push_opcode("test", source, destination);
+			} break;
+			case TK_JMP:
+			{
+				std::string jump_type = node.value;
+				node = _advance();
+
+				if (label_addresses.count(node.value))
+				{
+					// TODO: label already exists.
+				}
+				else
+				{
+					pending_addresses[text.size()] = node.value;
+					Argument value{TK_CONSTANT, "0"};
+					_push_opcode(jump_type);
+					text.push_back(0x0);
 				}
 			} break;
 			case TK_PUSH:
@@ -218,6 +270,22 @@ void Assembler::_generate_text(const std::string &p_input_file)
 					} break;
 				}
 
+			} break;
+			case TK_RET:
+			{
+				node = _advance();
+
+				text.push_back(0x89);
+				text.push_back(0xC7);
+
+				text.push_back(0xB8);
+				text.push_back(0x3C);
+				text.push_back(0x00);
+				text.push_back(0x00);
+				text.push_back(0x00);
+
+				text.push_back(0x0F);
+				text.push_back(0x05);
 			} break;
 		}
 
@@ -539,6 +607,16 @@ Assembler::Node Assembler::_advance()
 				if (word.find("ret") == 0)
 				{
 					return _make_node(TK_RET, word);
+				}
+
+				if (word.find("jz") == 0)
+				{
+					return _make_node(TK_JMP, word);
+				}
+
+				if (word.find("test") == 0)
+				{
+					return _make_node(TK_TEST, word);
 				}
 
 				return _make_node(TK_IDENTIFIER, word);

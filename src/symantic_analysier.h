@@ -42,6 +42,8 @@ public:
 
 	struct Node
 	{
+		unsigned parent_id;
+		unsigned int id;
 		Token type;
 		std::string value;
 	};
@@ -72,6 +74,7 @@ private:
 
 
 	unsigned int current_node_offset;
+	unsigned int node_count;
 	std::vector<Parser::Node> tree_vector;
 	Parser::Node current_node;
 

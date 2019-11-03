@@ -40,10 +40,14 @@ class CodeGenerator
 private:
 
 	std::vector<SymanticAnalysier::Node> _create_list(
-			const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root
+			const std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root,
+			unsigned int parent_id = 0
 	);
 
 	void _error(std::string p_error);
+
+	unsigned int if_counter;
+	unsigned int if_clause_counter;
 
 	unsigned int last_line;
 	std::vector<std::string> code;
@@ -53,12 +57,15 @@ private:
 	SymanticAnalysier::Node current_node;
 
 	void _advance();
+	Token _peek();
 	void _append_line(std::string p_code);
 	void _set_line(unsigned int p_line, std::string p_code);
 
 	void _generate_program();
 	void _generate_function();
 	void _generate_code_block();
+	void _generate_statement();
+	void _generate_if_block();
 	void _generate_expression();
 
 public:

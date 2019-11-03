@@ -208,6 +208,8 @@ enum Token
 	TK_LABEL,
 	TK_MOV,
 	TK_RET,
+	TK_JMP,
+	TK_TEST,
 
 	TK_PUSH,
 	TK_POP,
@@ -402,6 +404,8 @@ const std::unordered_map<Token, std::string> token_to_string
 	{ TK_LABEL, "LABEL"},
 	{ TK_MOV, "MOV"},
 	{ TK_RET, "RET"},
+	{ TK_JMP, "JMP"},
+	{ TK_JMP, "TEST"},
 
 	{ TK_PUSH, "PUSH"},
 	{ TK_POP, "POP"},

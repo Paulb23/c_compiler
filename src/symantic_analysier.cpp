@@ -36,6 +36,7 @@ std::unique_ptr<TreeNode<SymanticAnalysier::Node>> SymanticAnalysier::analyise(
 ) {
 
 	current_node_offset = -1;
+	node_count = 0;
 	tree_vector = _create_list(parse_tree);
 	_advance();
 
@@ -97,6 +98,7 @@ std::unique_ptr<TreeNode<SymanticAnalysier::Node>> SymanticAnalysier::_make_node
 		std::string p_value
 ) {
 	Node node;
+	node.id = node_count++;
 	node.type = p_type;
 	node.value = p_value;
 
