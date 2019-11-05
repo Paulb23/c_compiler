@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 #include "tokens.h"
 #include "symantic_analysier.h"
@@ -45,6 +46,10 @@ private:
 	);
 
 	void _error(std::string p_error);
+
+	// need to scope
+	std::unordered_map<std::string, unsigned int> local_var_map;
+	unsigned int stack_offset;
 
 	unsigned int if_counter;
 	unsigned int if_clause_counter;
@@ -64,6 +69,8 @@ private:
 	void _generate_program();
 	void _generate_function();
 	void _generate_code_block();
+	void _generate_declaration();
+	void _generate_assignment_expression();
 	void _generate_statement();
 	void _generate_if_block();
 	void _generate_expression();

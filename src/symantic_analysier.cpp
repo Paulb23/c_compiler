@@ -195,12 +195,15 @@ void SymanticAnalysier::_analyse_code_block(
 
 	while (current_node.type == TYPE_BLOCK_ITEM_LIST)
 	{
-		/* hack this in for the mean time */
 		_advance();
-		while (current_node.type == TYPE_STATEMENT)
+		while (current_node.type != TK_BRACE_CLOSE)
 		{
 			switch (current_node.type)
 			{
+				case TYPE_DECLARATION:
+				{
+					_analyse_declaration(p_parent);
+				} break;
 			    case TYPE_STATEMENT:
 			    {
 				    _analyse_statement(p_parent);
@@ -213,6 +216,31 @@ void SymanticAnalysier::_analyse_code_block(
 	{
 		_advance();
 	}
+}
+
+void SymanticAnalysier::_analyse_declaration(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> declaration = _make_node(DECLARATION, current_node.value);
+	_advance(); // declaration
+	_advance(); // type - assume int for now
+	_advance(); // list
+	while (current_node.type == TYPE_DIRECT_DECLARATOR)
+	{
+		_advance();
+		std::unique_ptr<TreeNode<Node>> var = _make_node(TK_IDENTIFIER, current_node.value);
+		declaration->add_child(var);
+		_advance();
+	}
+
+	if (current_node.type == TK_SEMICOLON)
+	{
+		p_parent->add_child(declaration);
+		_advance();
+		return;
+	}
+	_analyse_expression(declaration);
+	p_parent->add_child(declaration);
 }
 
 void SymanticAnalysier::_analyse_statement(
@@ -231,6 +259,21 @@ void SymanticAnalysier::_analyse_statement(
 	    {
 			_analyse_code_block(p_parent);
 	    } break;
+		case TYPE_ASSIGNMENT_EXPRESSION:
+		{
+			std::unique_ptr<TreeNode<Node>> assignment_node = _make_node(TYPE_ASSIGNMENT_EXPRESSION, current_node.value);
+
+			/* skip for lvalue, need to handle other types */
+			while (current_node.type != TYPE_IDENTIFIER) { _advance(); }
+			std::unique_ptr<TreeNode<Node>> lvalue = _make_node(TYPE_IDENTIFIER, current_node.value);
+			assignment_node->add_child(lvalue);
+
+			_advance(); // lvalue
+			_advance(); // op
+
+			_analyse_expression(assignment_node);
+			p_parent->add_child(assignment_node);
+		} break;
 	    case TK_IF:
 	    {
 		    std::unique_ptr<TreeNode<Node>> if_node = _make_node(TK_IF, current_node.value);
@@ -363,7 +406,7 @@ void SymanticAnalysier::_analyse_expression(
 	while (current_node.type != TK_SEMICOLON && current_node.type != TYPE_STATEMENT)
 	{
 		/* constants and basic operators for now */
-		if (current_node.token == TK_CONSTANT)
+		if (current_node.token == TK_CONSTANT || current_node.token == TK_IDENTIFIER)
 		{
 			output_queue.push(current_node);
 			_advance();

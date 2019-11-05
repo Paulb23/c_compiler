@@ -59,12 +59,14 @@ void Lexer::append_code(const std::string &p_code)
 
 Token Lexer::peek()
 {
+	_token_data current_token = token_data;
 	int current_line = line;
 	int current_column = column;
 	int current_offset = offset;
 
 	Token token = advance();
 
+	token_data = current_token;
 	line = current_line;
 	column = current_column;
 	offset = current_offset;

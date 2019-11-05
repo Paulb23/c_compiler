@@ -39,6 +39,9 @@ void CodeGenerator::generate_code(
 		std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root,
 		const std::string &p_output_file
 ) {
+	local_var_map.clear();
+	stack_offset = 8;
+
 	if_counter = 0;
 	if_clause_counter = 0;
 
@@ -147,6 +150,11 @@ void CodeGenerator::_generate_function()
 
 	_advance();
 
+	// set up stack frame for this function
+	stack_offset = 8;
+	_append_line("  push %ebp");
+	_append_line("  movl %esp,%ebp");
+
 	// args here
 	// advance
 
@@ -161,8 +169,60 @@ void CodeGenerator::_generate_code_block()
 {
 	while (current_node_offset + 1 < tree_vector.size())
 	{
+		if (current_node.type == DECLARATION)
+		{
+			_generate_declaration();
+			continue;
+		}
+
+		if (current_node.type == TYPE_ASSIGNMENT_EXPRESSION)
+		{
+			_generate_assignment_expression();
+			continue;
+		}
+
 		_generate_statement();
 	}
+}
+
+void CodeGenerator::_generate_declaration()
+{
+	_advance();
+
+	std::vector<std::string> vars;
+	while (current_node.type == TK_IDENTIFIER)
+	{
+		if (local_var_map.count(current_node.value))
+		{
+			_error(current_node.value + " is already defined.");
+		}
+		vars.push_back(current_node.value);
+		local_var_map[current_node.value] = stack_offset;
+		stack_offset += 8;
+		_advance();
+	}
+
+	if (current_node.type == TYPE_EXPRESSION)
+	{
+		_generate_expression();
+	}
+
+	for (const std::string var : vars)
+	{
+		_append_line("  pushl %eax");
+	}
+}
+
+void CodeGenerator::_generate_assignment_expression()
+{
+	_advance();
+
+	std::string lvalue = current_node.value;
+
+	_advance();
+	_generate_expression();
+
+	_append_line("  movl %eax,-" + std::to_string(local_var_map[lvalue]) + "(%ebp)");
 }
 
 void CodeGenerator::_generate_statement()
@@ -181,6 +241,9 @@ void CodeGenerator::_generate_statement()
 		{
 			_generate_expression();
 		}
+		// restore stack frame
+		_append_line("  movl %ebp,%esp");
+		_append_line("  pop %ebp");
 		_append_line("  ret");
 		return;
 	}
@@ -252,10 +315,27 @@ void CodeGenerator::_generate_expression()
 	while (current_node.type != TK_SEMICOLON)
 	{
 		_advance();
+		if (current_node.type == TK_SEMICOLON)
+		{
+			break;
+		}
+
 		if (current_node.type == TK_CONSTANT)
 		{
 			pushed_count++;
 			_append_line("  pushl $" + current_node.value);
+			continue;
+		}
+
+		if (current_node.type == TK_IDENTIFIER)
+		{
+			if (!local_var_map.count(current_node.value))
+			{
+				_error(current_node.value + " is not defined.");
+			}
+			pushed_count++;
+			_append_line("  movl -" + std::to_string(local_var_map[current_node.value]) + "(%ebp),%eax");
+			_append_line("  pushl %eax");
 			continue;
 		}
 

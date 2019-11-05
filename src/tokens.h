@@ -193,6 +193,7 @@ enum Token
 
 	/* Symatic analysis */
 	FUNCTION,
+	DECLARATION,
 	CODE_BLOCK,
 
 	/* assembler tokens */
@@ -389,6 +390,7 @@ const std::unordered_map<Token, std::string> token_to_string
 
 	/* Symatic analysis */
 	{FUNCTION, "FUNCTION"},
+	{DECLARATION, "DECLARATION"},
 	{CODE_BLOCK, "CODE_BLOCK"},
 
 	/* Assembeler */
@@ -422,6 +424,8 @@ const std::unordered_map<Token, int> op_precedence
 
 	{TK_PLUS, 4},
 	{TK_MINUS, 4},
+
+	{TK_ASSIGN, 14}
 };
 
 #endif // TOKENS_H

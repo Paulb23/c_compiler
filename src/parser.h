@@ -153,12 +153,12 @@ private:
 			bool required = true
 	);
 
-	void _parse_declaration_specifiers(
+	bool _parse_declaration_specifiers(
 			std::unique_ptr<TreeNode<Node>> &p_parent,
 			bool required = true
 	);
 
-	void _parse_declaration(
+	bool _parse_declaration(
 			std::unique_ptr<TreeNode<Node>> &p_parent,
 			bool required = true
 	);
@@ -174,7 +174,8 @@ private:
 	);
 
 	void _parse_declarator(
-			std::unique_ptr<TreeNode<Node>> &p_parent
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
 	);
 
 	void _parse_pointer(
@@ -205,8 +206,7 @@ private:
 	);
 
 	void _parse_statement(
-			std::unique_ptr<TreeNode<Node>> &p_parent,
-			bool required = true
+			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
 	void _parse_selection_statement(
@@ -218,6 +218,10 @@ private:
 	);
 
 	void _parse_jump_statement(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_initialiser(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 

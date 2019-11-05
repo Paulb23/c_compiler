@@ -41,6 +41,9 @@ private:
 	const std::unordered_map<std::string, unsigned char> prefix_opcodes
 	{
 		{"mul", 0x0F},
+
+		{"mov_dreg", 0x48},
+		{"mov_sreg", 0x48}
 	};
 
 	const std::unordered_map<std::string, unsigned char> op_opcodes
@@ -65,6 +68,9 @@ private:
 		{"pop_ebp", 0x5D},
 		{"pop_esi", 0x5E},
 		{"pop_esi", 0x5F},
+
+		{"mov_dreg",     0x89},
+		{"mov_sreg",     0x8B},
 
 		{"mul", 0xAF},
 		{"ret", 0xc3},
@@ -98,7 +104,18 @@ private:
 	{
 		const Token type;
 		const std::string value;
+		const std::string displacement;
 	} Argument;
+
+	/*
+	 * For Assembeler Lexer parser
+	 */
+	struct Node
+	{
+		Token type;
+		Token op;
+		std::string value;
+	};
 
 #define TEXT_ADDR  0x40000078
 
@@ -113,10 +130,12 @@ private:
 	void _generate_program_header();
 	void _generate_text(const std::string &p_input_file);
 
+	Argument _calulate_displacement_argument(Node p_node);
+
 	void _push_opcode(
 			std::string p_mnemonic,
-			Argument p_source = {NONE, ""},
-			Argument p_destination = {NONE, ""}
+			Argument p_source = {NONE, "", ""},
+			Argument p_destination = {NONE, "", ""}
 	);
 
 	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
@@ -125,12 +144,6 @@ private:
 	/*
 	 * Assembeler Lexer parser
 	 */
-	struct Node
-	{
-		Token type;
-		Token op;
-		std::string value;
-	};
 	std::string assembly_code;
 	int assembly_code_size;
 	int assembly_offset;

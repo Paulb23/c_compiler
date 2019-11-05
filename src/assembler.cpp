@@ -164,13 +164,13 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			case TK_TEST:
 			{
 				node = _advance();
-				Argument source{node.type, node.value};
+				Argument source{node.type, node.value, ""};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value};
+				Argument destination{node.type, node.value, ""};
 
 				_push_opcode("test", source, destination);
 			} break;
@@ -186,7 +186,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				else
 				{
 					pending_addresses[text.size()] = node.value;
-					Argument value{TK_CONSTANT, "0"};
+					Argument value{TK_CONSTANT, "0", ""};
 					_push_opcode(jump_type);
 					text.push_back(0x0);
 				}
@@ -198,7 +198,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				{
 					case TK_CONSTANT:
 					{
-						Argument value{node.type, node.value};
+						Argument value{node.type, node.value, ""};
 						_push_opcode("push_imm", value);
 					} break;
 					case TK_REGISTER:
@@ -223,26 +223,26 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			case TK_ADD:
 			{
 				node = _advance();
-				Argument source{node.type, node.value};
+				Argument source{node.type, node.value, ""};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value};
+				Argument destination{node.type, node.value, ""};
 
 				_push_opcode("add", source, destination);
 			} break;
 			case TK_MUL:
 			{
 				node = _advance();
-				Argument source{node.type, node.value};
+				Argument source{node.type, node.value, ""};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value};
+				Argument destination{node.type, node.value, ""};
 
 				_push_opcode("mul", source, destination);
 			} break;
@@ -250,31 +250,28 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			{
 				node = _advance();
 
-				/* TODO: move to function */
-				Node source = node;
+				Argument source = _calulate_displacement_argument(node);
 
 				/* skip comma */
 				node = _advance();
 				node = _advance();
-				switch (node.type) {
-					case TK_REGISTER:
-					{
-						//text.push_back(_get_mov_register_opcode(node.value));
-					} break;
-				}
 
-				switch (source.type) {
-					case TK_CONSTANT:
-					{
-						_push_int(text, std::stoi(source.value));
-					} break;
-				}
+				Argument destination = _calulate_displacement_argument(node);
 
+				if (source.displacement == "")
+				{
+					_push_opcode("mov_dreg", source, destination);
+				}
+				else
+				{
+					_push_opcode("mov_sreg", source, destination);
+				}
 			} break;
 			case TK_RET:
 			{
 				node = _advance();
 
+				text.push_back(0x48);
 				text.push_back(0x89);
 				text.push_back(0xC7);
 
@@ -300,7 +297,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 	 *	mov eax,0x3c
 	 *	syscall
 	 */
-	text.push_back(0x89);
+	/*text.push_back(0x89);
 	text.push_back(0xC7);
 
 	text.push_back(0xB8);
@@ -310,7 +307,23 @@ void Assembler::_generate_text(const std::string &p_input_file)
 	text.push_back(0x00);
 
 	text.push_back(0x0F);
-	text.push_back(0x05);
+	text.push_back(0x05);*/
+}
+
+Assembler::Argument Assembler::_calulate_displacement_argument(Node p_node)
+{
+	Token type = p_node.type;
+	std::string value = p_node.value;
+	std::string displacement = "";
+	if (p_node.type == TK_MINUS)
+	{
+		p_node = _advance(); // -
+		displacement = p_node.value;
+		p_node = _advance(); // constant
+		type = p_node.type,
+		value = p_node.value;
+	}
+	return Argument{type, value, displacement};
 }
 
 void Assembler::_push_opcode(
@@ -355,7 +368,7 @@ void Assembler::_push_opcode(
 			Argument rm =  source_is_dest ? p_source : p_destination;
 
 			unsigned char mod = 0x00;
-			if (rm.type == TK_REGISTER)
+			if (rm.type == TK_REGISTER && rm.displacement == "")
 			{
 				mod = REGISTER_ADRESSING;
 			}
@@ -366,10 +379,23 @@ void Assembler::_push_opcode(
 			operand |= mod;
 
 			operand |= register_values.at(reg.value) << 3;
-
-			if (mod == REGISTER_ADRESSING)
+			operand |= register_values.at(rm.value);
+			if (mod == FOUR_BYTE_DISPLACEMENT)
 			{
-				operand |= register_values.at(rm.value);
+				if (!has_immediate && rm.displacement != "")
+				{
+					has_immediate = true;
+					int displacement = std::stoi(rm.displacement);
+					if (std::stoi(rm.displacement) == 0)
+					{
+						displacement = 0x00000000;
+					}
+					else
+					{
+						displacement = 0xFFFFFFFF ^(displacement - 1);
+					}
+					_push_int(immediate, displacement);
+				}
 			}
 		}
 	}
@@ -535,6 +561,12 @@ Assembler::Node Assembler::_advance()
 				}
 				value += tk_value.value;
 				return _make_node(TK_CONSTANT, value);
+			} break;
+			/* skip parens for now*/
+			case '(':
+			case ')':
+			{
+				continue;
 			} break;
 			case '%':
 			{
