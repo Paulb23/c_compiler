@@ -39,8 +39,7 @@ void CodeGenerator::generate_code(
 		std::unique_ptr<TreeNode<SymanticAnalysier::Node>> &p_root,
 		const std::string &p_output_file
 ) {
-	local_var_map.clear();
-	stack_offset = 8;
+	function_map.clear();
 
 	if_counter = 0;
 	if_clause_counter = 0;
@@ -56,6 +55,19 @@ void CodeGenerator::generate_code(
 	}
 
 	_advance();
+
+	/* Inject _start */
+	_append_line("globl _start");
+	_append_line("_start:");
+	_append_line("  push %ebp");
+	_append_line("  movl %esp,%ebp");
+	_append_line("  call main");
+	_append_line("  movl %eax,%edi");
+	_append_line("  push $60");
+	_append_line("  popl %eax");
+	_append_line("  syscall");
+	_append_line("  ret"); /* debug only, not executed. */
+
 	_generate_program();
 
 	std::cout << "-----------------------------------------------" << std::endl;
@@ -96,6 +108,11 @@ void CodeGenerator::_error(std::string p_error)
 {
 	std::cout << "error: " << p_error << std::endl;
 	exit(0);
+}
+
+void CodeGenerator::_warn(std::string p_warning)
+{
+	std::cout << "warning: " << p_warning << std::endl;
 }
 
 void CodeGenerator::_advance()
@@ -139,97 +156,125 @@ void CodeGenerator::_set_line(unsigned int p_line, std::string p_code)
 
 void CodeGenerator::_generate_program()
 {
-	/* we know there's only one for now */
-	_generate_function();
+	while (current_node.type == FUNCTION)
+	{
+		_generate_function();
+	}
 }
 
 void CodeGenerator::_generate_function()
 {
 	_append_line("globl " + current_node.value);
 	_append_line(current_node.value + ":");
+	function_map[current_node.value] = 0;
 
 	_advance();
 
 	// set up stack frame for this function
-	stack_offset = 8;
 	_append_line("  push %ebp");
 	_append_line("  movl %esp,%ebp");
 
+	Scope scope;
 	// args here
 	// advance
 
 	if (current_node.type == CODE_BLOCK)
 	{
-		_advance();
-		_generate_code_block();
+		_generate_code_block(scope);
 	}
 }
 
-void CodeGenerator::_generate_code_block()
+void CodeGenerator::_generate_code_block(const Scope &p_scope)
 {
-	while (current_node_offset + 1 < tree_vector.size())
+	_advance();
+	Scope scope = p_scope;
+	scope.level += 1;
+	while (
+		   current_node.type != FUNCTION &&
+		   current_node.type != TK_BRACE_CLOSE &&
+		   current_node_offset + 1 < tree_vector.size())
 	{
 		if (current_node.type == DECLARATION)
 		{
-			_generate_declaration();
+			scope = _generate_declaration(scope);
 			continue;
 		}
 
 		if (current_node.type == TYPE_ASSIGNMENT_EXPRESSION)
 		{
-			_generate_assignment_expression();
+			_generate_assignment_expression(scope);
 			continue;
 		}
 
-		_generate_statement();
+		_generate_statement(scope);
+	}
+
+	if (current_node.type != FUNCTION)
+	{
+		_advance();
 	}
 }
 
-void CodeGenerator::_generate_declaration()
+CodeGenerator::Scope CodeGenerator::_generate_declaration(const Scope &p_scope)
 {
 	_advance();
 
-	std::vector<std::string> vars;
+	Scope scope = p_scope;
+	int vars = 0;
 	while (current_node.type == TK_IDENTIFIER)
 	{
-		if (local_var_map.count(current_node.value))
-		{
+		if (
+			scope.var_map.count(current_node.value) &&
+			scope.var_map[current_node.value].scope_level == scope.level
+		) {
 			_error(current_node.value + " is already defined.");
 		}
-		vars.push_back(current_node.value);
-		local_var_map[current_node.value] = stack_offset;
-		stack_offset += 8;
+		Var var;
+		var.scope_level = scope.level;
+		var.stack_offset = scope.stack_offset;
+		scope.var_map[current_node.value] = var;
+		scope.stack_offset += 8;
+		vars++;
 		_advance();
 	}
 
 	if (current_node.type == TYPE_EXPRESSION)
 	{
-		_generate_expression();
+		_generate_expression(scope);
 	}
 
-	for (const std::string var : vars)
+	for (int i = 0; i < vars; i++)
 	{
 		_append_line("  pushl %eax");
 	}
+
+	return scope;
 }
 
-void CodeGenerator::_generate_assignment_expression()
+void CodeGenerator::_generate_assignment_expression(const Scope &p_scope)
 {
 	_advance();
 
 	std::string lvalue = current_node.value;
 
 	_advance();
-	_generate_expression();
+	_generate_expression(p_scope);
 
-	_append_line("  movl %eax,-" + std::to_string(local_var_map[lvalue]) + "(%ebp)");
+	int offset = p_scope.var_map.at(lvalue).stack_offset;
+	_append_line("  movl %eax,-" + std::to_string(offset) + "(%ebp)");
 }
 
-void CodeGenerator::_generate_statement()
+void CodeGenerator::_generate_statement(const Scope &p_scope)
 {
+	if (current_node.type == TK_BRACE_OPEN)
+	{
+		_generate_code_block(p_scope);
+		return;
+	}
+
 	if (current_node.type == TK_IF)
 	{
-		_generate_if_block();
+		_generate_if_block(p_scope);
 		return;
 	}
 
@@ -239,7 +284,7 @@ void CodeGenerator::_generate_statement()
 
 		if (current_node.type == TYPE_EXPRESSION)
 		{
-			_generate_expression();
+			_generate_expression(p_scope);
 		}
 		// restore stack frame
 		_append_line("  movl %ebp,%esp");
@@ -250,7 +295,7 @@ void CodeGenerator::_generate_statement()
 	_advance();
 }
 
-void CodeGenerator::_generate_if_block()
+void CodeGenerator::_generate_if_block(const Scope &p_scope)
 {
 	std::string end_if_label = "if_" + std::to_string(if_counter++);
 
@@ -270,7 +315,7 @@ void CodeGenerator::_generate_if_block()
 		if (current_node.type == TK_IF)
 		{
 			_advance(); // IF
-			_generate_expression();
+			_generate_expression(p_scope);
 
 			_append_line("  test %eax,%eax");
 			_append_line("  jz if_clause_" + std::to_string(clause));
@@ -278,7 +323,14 @@ void CodeGenerator::_generate_if_block()
 			_advance(); // STATEMENT
 		}
 
-		_generate_statement();
+		if (current_node.type == TK_BRACE_OPEN)
+		{
+			_generate_code_block(p_scope);
+		}
+		else
+		{
+			_generate_statement(p_scope);
+		}
 
 		_append_line("  jz " + end_if_label);
 		_append_line("if_clause_" + std::to_string(clause) + ":");
@@ -291,10 +343,6 @@ void CodeGenerator::_generate_if_block()
 				continue;
 			}
 		}
-		else
-		{
-			_advance(); // end of if statment
-		}
 
 		_append_line(end_if_label + ":");
 
@@ -306,7 +354,7 @@ void CodeGenerator::_generate_if_block()
 	}
 }
 
-void CodeGenerator::_generate_expression()
+void CodeGenerator::_generate_expression(const Scope &p_scope)
 {
 	/*
 	 * Use a stack based system
@@ -327,14 +375,23 @@ void CodeGenerator::_generate_expression()
 			continue;
 		}
 
+		if (current_node.type == FUNCTION_CALL)
+		{
+			_append_line("  call " + current_node.value);
+			_append_line("  pushl %eax"); /* TODO return is in EAX so this can be removed. */
+			pushed_count++;
+			continue;
+		}
+
 		if (current_node.type == TK_IDENTIFIER)
 		{
-			if (!local_var_map.count(current_node.value))
+			if (!p_scope.var_map.count(current_node.value))
 			{
 				_error(current_node.value + " is not defined.");
 			}
 			pushed_count++;
-			_append_line("  movl -" + std::to_string(local_var_map[current_node.value]) + "(%ebp),%eax");
+			int offset = p_scope.var_map.at(current_node.value).stack_offset;
+			_append_line("  movl -" + std::to_string(offset) + "(%ebp),%eax");
 			_append_line("  pushl %eax");
 			continue;
 		}

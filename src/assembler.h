@@ -73,11 +73,13 @@ private:
 		{"mov_sreg",     0x8B},
 
 		{"mul", 0xAF},
-		{"ret", 0xc3},
+		{"ret", 0xC3},
 
 		{"test",0x85},
 
-		{"jz", 0x74}
+		{"call", 0xE8},
+		{"jz",   0x74},
+		{"jmp",  0xEB}
 	};
 
 	const std::unordered_map<std::string, unsigned char> register_values

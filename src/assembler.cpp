@@ -124,6 +124,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 	std::unordered_map<std::string, unsigned char> label_addresses;
 	std::unordered_map<int, std::string> pending_addresses;
+	std::unordered_map<int, int> instruction_size; /* TODO: need to keep better track */
 
 	Node node = _advance();
 	while (node.type != TK_EOF && node.type != TK_ERROR)
@@ -148,8 +149,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 							continue;
 						}
 
-						// TODO: off by 2???
-						unsigned char relative_address = (text.size() - jump.first) - 2;
+						unsigned char relative_address = (text.size() - jump.first) - instruction_size[jump.first];
 						text[jump.first + 1] = ((relative_address) & 0xFF);
 					}
 				}
@@ -174,6 +174,28 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 				_push_opcode("test", source, destination);
 			} break;
+			case TK_CALL:
+			{
+				/* TODO: merge with JMP? */
+				std::string jump_type = node.value;
+				node = _advance();
+
+				if (label_addresses.count(node.value))
+				{
+					// TODO: label already exists.
+				}
+				else
+				{
+					pending_addresses[text.size()] = node.value;
+					instruction_size[text.size()] = 5;
+					Argument value{TK_CONSTANT, "0", ""};
+					_push_opcode(jump_type);
+					text.push_back(0x0);
+					text.push_back(0x0);
+					text.push_back(0x0);
+					text.push_back(0x0);
+				}
+			} break;
 			case TK_JMP:
 			{
 				std::string jump_type = node.value;
@@ -186,6 +208,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				else
 				{
 					pending_addresses[text.size()] = node.value;
+					instruction_size[text.size()] = 2;
 					Argument value{TK_CONSTANT, "0", ""};
 					_push_opcode(jump_type);
 					text.push_back(0x0);
@@ -271,15 +294,11 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			{
 				node = _advance();
 
-				text.push_back(0x48);
-				text.push_back(0x89);
-				text.push_back(0xC7);
-
-				text.push_back(0xB8);
-				text.push_back(0x3C);
-				text.push_back(0x00);
-				text.push_back(0x00);
-				text.push_back(0x00);
+				_push_opcode("ret");
+			} break;
+			case TK_SYSCALL:
+			{
+				node = _advance();
 
 				text.push_back(0x0F);
 				text.push_back(0x05);
@@ -289,25 +308,6 @@ void Assembler::_generate_text(const std::string &p_input_file)
 		//std::cout << token_to_string.at(node.type) << " " << token_to_string.at(node.op) << " " << node.value << std::endl;
 		node = _advance();
 	}
-
-	/*
-	 * append program exit
-	 *
-	 *	mov edi,eax
-	 *	mov eax,0x3c
-	 *	syscall
-	 */
-	/*text.push_back(0x89);
-	text.push_back(0xC7);
-
-	text.push_back(0xB8);
-	text.push_back(0x3C);
-	text.push_back(0x00);
-	text.push_back(0x00);
-	text.push_back(0x00);
-
-	text.push_back(0x0F);
-	text.push_back(0x05);*/
 }
 
 Assembler::Argument Assembler::_calulate_displacement_argument(Node p_node)
@@ -641,9 +641,19 @@ Assembler::Node Assembler::_advance()
 					return _make_node(TK_RET, word);
 				}
 
-				if (word.find("jz") == 0)
+				if (word.find("jz") == 0 || word.find("jmp") == 0)
 				{
 					return _make_node(TK_JMP, word);
+				}
+
+				if (word.find("syscall") == 0)
+				{
+					return _make_node(TK_SYSCALL, word);
+				}
+
+				if (word.find("call") == 0)
+				{
+					return _make_node(TK_CALL, word);
 				}
 
 				if (word.find("test") == 0)

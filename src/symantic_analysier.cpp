@@ -176,7 +176,14 @@ void SymanticAnalysier::_analyse_function_declaration(
 	_update_node(p_parent, FUNCTION, current_node.value);
 
 	/* skip function args */
-	while (current_node.type != TYPE_COMPOUND_STATEMENT) { _advance(); }
+	while (current_node.type != TYPE_COMPOUND_STATEMENT && current_node.type != TK_SEMICOLON ) { _advance(); }
+
+	if (current_node.type == TK_SEMICOLON)
+	{
+		function_declarations.push_back(current_node.value); // handle args
+		_advance();
+		return;
+	}
 
 	std::unique_ptr<TreeNode<Node>> code_block = _make_node(CODE_BLOCK, current_node.value);
 	_advance();
@@ -257,7 +264,13 @@ void SymanticAnalysier::_analyse_statement(
 	{
 	    case TK_BRACE_OPEN: // compound statment work around for now...
 	    {
+			std::unique_ptr<TreeNode<Node>> brace_open = _make_node(TK_BRACE_OPEN, current_node.value);
+			p_parent->add_child(brace_open);
+
 			_analyse_code_block(p_parent);
+
+			std::unique_ptr<TreeNode<Node>> brace_close = _make_node(TK_BRACE_CLOSE, "}");
+			p_parent->add_child(brace_close);
 	    } break;
 		case TYPE_ASSIGNMENT_EXPRESSION:
 		{
@@ -408,8 +421,14 @@ void SymanticAnalysier::_analyse_expression(
 		/* constants and basic operators for now */
 		if (current_node.token == TK_CONSTANT || current_node.token == TK_IDENTIFIER)
 		{
-			output_queue.push(current_node);
+			Parser::Node node = current_node;
 			_advance();
+
+			if (current_node.token == TK_PARENTHESIS_OPEN)
+			{
+				node.token = FUNCTION_CALL;
+			}
+			output_queue.push(node);
 			continue;
 		}
 

@@ -72,6 +72,7 @@ private:
 			std::string p_indent = ""
 	);
 
+	std::vector<std::string> function_declarations;
 
 	unsigned int current_node_offset;
 	unsigned int node_count;

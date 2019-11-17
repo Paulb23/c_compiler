@@ -46,10 +46,20 @@ private:
 	);
 
 	void _error(std::string p_error);
+	void _warn(std::string p_warning);
 
-	// need to scope
-	std::unordered_map<std::string, unsigned int> local_var_map;
-	unsigned int stack_offset;
+	struct Var {
+		unsigned int scope_level = 0;
+		unsigned int stack_offset = 0;
+	};
+
+	struct Scope {
+		unsigned int level = 0;
+		int stack_offset = 8;
+		std::unordered_map<std::string, Var> var_map;
+	};
+
+	std::unordered_map<std::string, unsigned int> function_map;
 
 	unsigned int if_counter;
 	unsigned int if_clause_counter;
@@ -68,12 +78,13 @@ private:
 
 	void _generate_program();
 	void _generate_function();
-	void _generate_code_block();
-	void _generate_declaration();
-	void _generate_assignment_expression();
-	void _generate_statement();
-	void _generate_if_block();
-	void _generate_expression();
+
+	void _generate_code_block(const Scope &p_scope);
+	Scope _generate_declaration(const Scope &p_scope);
+	void _generate_assignment_expression(const Scope &p_scope);
+	void _generate_statement(const Scope &p_scope);
+	void _generate_if_block(const Scope &p_scope);
+	void _generate_expression(const Scope &p_scope);
 
 public:
 	void generate_code(

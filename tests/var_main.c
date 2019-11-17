@@ -5,5 +5,12 @@ int main()
 	int y = 2;
 	int z = 1;
 	z = x + y;
+	{
+		int z = 1;
+	}
+
+	{
+	}
+
 	return z;
 }

@@ -144,7 +144,7 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
-	void _parse_function_definition(
+	bool _parse_function_definition(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 

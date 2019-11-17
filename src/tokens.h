@@ -193,6 +193,7 @@ enum Token
 
 	/* Symatic analysis */
 	FUNCTION,
+	FUNCTION_CALL,
 	DECLARATION,
 	CODE_BLOCK,
 
@@ -210,6 +211,8 @@ enum Token
 	TK_MOV,
 	TK_RET,
 	TK_JMP,
+	TK_CALL,
+	TK_SYSCALL,
 	TK_TEST,
 
 	TK_PUSH,
@@ -390,6 +393,7 @@ const std::unordered_map<Token, std::string> token_to_string
 
 	/* Symatic analysis */
 	{FUNCTION, "FUNCTION"},
+	{FUNCTION_CALL, "FUNCTION_CALL"},
 	{DECLARATION, "DECLARATION"},
 	{CODE_BLOCK, "CODE_BLOCK"},
 
@@ -407,7 +411,9 @@ const std::unordered_map<Token, std::string> token_to_string
 	{ TK_MOV, "MOV"},
 	{ TK_RET, "RET"},
 	{ TK_JMP, "JMP"},
-	{ TK_JMP, "TEST"},
+	{ TK_CALL, "CALL"},
+	{ TK_SYSCALL, "SYS_CALL"},
+	{ TK_TEST, "TEST"},
 
 	{ TK_PUSH, "PUSH"},
 	{ TK_POP, "POP"},
