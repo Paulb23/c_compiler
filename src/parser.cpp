@@ -400,10 +400,12 @@ void Parser::_parse_direct_declarator(
 	if (current_token == TK_PARENTHESIS_OPEN)
 	{
 		node = _make_node(TK_PARENTHESIS_OPEN, lexer.get_token_value(), TK_PARENTHESIS_OPEN);
-		// TODO: parse argument list here.
+		_advance();
+
+		_parse_parameter_type_list(node, false);
+
 		p_parent->add_child(node);
 
-		_advance();
 		if (current_token != TK_PARENTHESIS_CLOSE)
 		{
 			_error("expected ')' but found: '" + lexer.get_token_value() + "'");
@@ -741,6 +743,44 @@ void Parser::_parse_initialiser(
 			// todo: list
 		}
 		_parse_assignment_expression(p_parent);
+}
+
+void Parser::_parse_parameter_type_list(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
+) {
+		_parse_parameter_declaration(p_parent, required);
+
+		if (current_token != TK_COMMA)
+		{
+			return;
+		}
+
+		/* TODO: VARGS */
+}
+
+void Parser::_parse_parameter_declaration(
+		std::unique_ptr<TreeNode<Node>> &p_parent,
+		bool required
+) {
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_PARAMETER_DECLARATION, "");
+
+	if (!_parse_declaration_specifiers(node, required) && !required)
+	{
+		return;
+	}
+
+	_parse_declarator(node);
+	/* TODO: abstract declarator */
+
+	p_parent->add_child(node);
+	if (current_token != TK_COMMA)
+	{
+		return;
+	}
+
+	_advance();
+	_parse_parameter_declaration(p_parent);
 }
 
 void Parser::_parse_expression(
@@ -1136,7 +1176,10 @@ void Parser::_parse_postfix_expression(
 		p_parent->add_child(open_parenthesis);
 		_advance();
 
-		// args here
+		if (current_token != TK_PARENTHESIS_CLOSE)
+		{
+			_parse_argument_expression_list(p_parent);
+		}
 
 		if (current_token != TK_PARENTHESIS_CLOSE)
 		{
@@ -1151,6 +1194,30 @@ void Parser::_parse_postfix_expression(
 		p_parent->add_child(close_parenthesis);
 		_advance();
 	}
+}
+
+void Parser::_parse_argument_expression_list(
+		std::unique_ptr<TreeNode<Node>> &p_parent
+) {
+	std::unique_ptr<TreeNode<Node>> node = _make_node(TYPE_ASSIGNMENT_EXPRESSION, "");
+	_parse_assignment_expression(node, true);
+	p_parent->add_child(node);
+
+	/* treat each arg as a seperate expression by appending a semi-colon */
+	std::unique_ptr<TreeNode<Node>> semi_colon = _make_node(
+				TK_SEMICOLON,
+				";",
+				TK_SEMICOLON
+	);
+	p_parent->add_child(semi_colon);
+
+	if (current_token != TK_COMMA)
+	{
+		return;
+	}
+
+	_advance();
+	_parse_argument_expression_list(p_parent);
 }
 
 void Parser::_parse_primary_expression(

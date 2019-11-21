@@ -1,4 +1,4 @@
-//result=1
+//result=2
 /*
  * this is a
  * multiline comment

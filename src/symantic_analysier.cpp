@@ -175,12 +175,26 @@ void SymanticAnalysier::_analyse_function_declaration(
 
 	_update_node(p_parent, FUNCTION, current_node.value);
 
-	/* skip function args */
-	while (current_node.type != TYPE_COMPOUND_STATEMENT && current_node.type != TK_SEMICOLON ) { _advance(); }
+	_advance(); // name
+	_advance(); // (
+
+	if (current_node.type != TK_PARENTHESIS_CLOSE)
+	{
+		while (current_node.type == TYPE_PARAMETER_DECLARATION)
+		{
+			_advance(); // param dec
+			_advance(); // TODO: type
+			_advance(); // direct declarator
+			std::unique_ptr<TreeNode<Node>> arg = _make_node(TYPE_IDENTIFIER, current_node.value);
+			p_parent->add_child(arg);
+			_advance();
+		}
+	}
+	_advance(); // )
 
 	if (current_node.type == TK_SEMICOLON)
 	{
-		function_declarations.push_back(current_node.value); // handle args
+		function_declarations.push_back(current_node.value);
 		_advance();
 		return;
 	}
@@ -416,8 +430,12 @@ void SymanticAnalysier::_analyse_expression(
 	std::queue<Parser::Node> output_queue;
 	std::stack<Parser::Node> op_stack;
 
-	while (current_node.type != TK_SEMICOLON && current_node.type != TYPE_STATEMENT)
-	{
+	std::unordered_map<int, std::unique_ptr<TreeNode<Node>>> arg_tree;
+	while (
+		   current_node.type != TK_SEMICOLON &&
+		   current_node.type != TK_COMMA     &&
+		   current_node.type != TYPE_STATEMENT
+	) {
 		/* constants and basic operators for now */
 		if (current_node.token == TK_CONSTANT || current_node.token == TK_IDENTIFIER)
 		{
@@ -427,6 +445,20 @@ void SymanticAnalysier::_analyse_expression(
 			if (current_node.token == TK_PARENTHESIS_OPEN)
 			{
 				node.token = FUNCTION_CALL;
+				int func_call_index = output_queue.size() - 1;
+				arg_tree[func_call_index] = _make_node(TYPE_ARGUMENT_EXPRESSION_LIST, "");
+
+				std::unique_ptr<TreeNode<Node>> open_paren = _make_node(current_node.token, current_node.value);
+				arg_tree[func_call_index]->add_child(open_paren);
+
+				_advance(); // (
+				while (current_node.token != TK_PARENTHESIS_CLOSE)
+				{
+					_analyse_expression(arg_tree[func_call_index]);
+				}
+
+				std::unique_ptr<TreeNode<Node>> close_paren = _make_node(current_node.token, current_node.value);
+				arg_tree[func_call_index]->add_child(close_paren);
 			}
 			output_queue.push(node);
 			continue;
@@ -471,10 +503,15 @@ void SymanticAnalysier::_analyse_expression(
 	 * Build the tree
 	 */
 	std::unique_ptr<TreeNode<Node>> expression = _make_node(TYPE_EXPRESSION, "");
+	int total_size = output_queue.size() - 1;
 	while (!output_queue.empty())
 	{
 		Parser::Node top = output_queue.front();
 		std::unique_ptr<TreeNode<Node>> child = _make_node(top.token, top.value);
+		if (arg_tree.count(total_size - (output_queue.size())) > 0)
+		{
+			child->add_child(arg_tree[total_size - (output_queue.size())]);
+		}
 		output_queue.pop();
 		expression->add_child(child);
 	}

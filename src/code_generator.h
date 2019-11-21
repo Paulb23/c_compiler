@@ -50,7 +50,7 @@ private:
 
 	struct Var {
 		unsigned int scope_level = 0;
-		unsigned int stack_offset = 0;
+		int stack_offset = 0;
 	};
 
 	struct Scope {
@@ -63,6 +63,8 @@ private:
 
 	unsigned int if_counter;
 	unsigned int if_clause_counter;
+
+	unsigned int comp_clause_counter;
 
 	unsigned int last_line;
 	std::vector<std::string> code;

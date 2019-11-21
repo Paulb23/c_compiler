@@ -40,15 +40,19 @@ class Assembler
 private:
 	const std::unordered_map<std::string, unsigned char> prefix_opcodes
 	{
+		{"sub",  0x48},
 		{"mul", 0x0F},
 
 		{"mov_dreg", 0x48},
-		{"mov_sreg", 0x48}
+		{"mov_sreg", 0x48},
+
+		{"cmp",  0x48},
 	};
 
 	const std::unordered_map<std::string, unsigned char> op_opcodes
 	{
 		{"add", 0x01},
+		{"sub", 0x29},
 
 		{"push_eax", 0x50},
 		{"push_ecx", 0x51},
@@ -78,6 +82,7 @@ private:
 		{"test",0x85},
 
 		{"call", 0xE8},
+		{"cmp",  0x3B},
 		{"jz",   0x74},
 		{"jmp",  0xEB}
 	};
@@ -106,7 +111,7 @@ private:
 	{
 		const Token type;
 		const std::string value;
-		const std::string displacement;
+		const int displacement;
 	} Argument;
 
 	/*
@@ -136,8 +141,8 @@ private:
 
 	void _push_opcode(
 			std::string p_mnemonic,
-			Argument p_source = {NONE, "", ""},
-			Argument p_destination = {NONE, "", ""}
+			Argument p_source = {NONE, "", 0},
+			Argument p_destination = {NONE, "", 0}
 	);
 
 	void _push_int(std::vector<unsigned char> &p_vector, int p_value);
@@ -155,6 +160,7 @@ private:
 
 	void _load_assembly(const std::string &p_file);
 
+	Node _peek();
 	Node _advance();
 
 	Node _make_node(Token p_token, std::string p_value, Token p_op = NONE);

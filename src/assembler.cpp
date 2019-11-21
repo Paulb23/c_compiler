@@ -139,7 +139,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			{
 				if (!label_addresses.count(node.value))
 				{
-					unsigned int address = TEXT_ADDR + (text.size() * sizeof(unsigned char));
+					unsigned int address = text.size();
 					label_addresses[node.value] = address;
 
 					for (std::pair<int, std::string> jump : pending_addresses)
@@ -161,16 +161,29 @@ void Assembler::_generate_text(const std::string &p_input_file)
 					_error("expected ':' but found '" + node.value + "'");
 				}
 			} break;
-			case TK_TEST:
+			case TK_CMP:
 			{
 				node = _advance();
-				Argument source{node.type, node.value, ""};
+				Argument source{node.type, node.value, 0};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value, ""};
+				Argument destination{node.type, node.value, 0};
+
+				_push_opcode("cmp", source, destination);
+			} break;
+			case TK_TEST:
+			{
+				node = _advance();
+				Argument source{node.type, node.value, 0};
+
+				/* skip comma */
+				node = _advance();
+
+				node = _advance();
+				Argument destination{node.type, node.value, 0};
 
 				_push_opcode("test", source, destination);
 			} break;
@@ -182,13 +195,15 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 				if (label_addresses.count(node.value))
 				{
-					// TODO: label already exists.
+					int relative_address = (label_addresses[node.value] - text.size()) - 5;
+					_push_opcode(jump_type);
+					_push_int(text, relative_address);
 				}
 				else
 				{
 					pending_addresses[text.size()] = node.value;
 					instruction_size[text.size()] = 5;
-					Argument value{TK_CONSTANT, "0", ""};
+					Argument value{TK_CONSTANT, "0", 0};
 					_push_opcode(jump_type);
 					text.push_back(0x0);
 					text.push_back(0x0);
@@ -209,7 +224,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				{
 					pending_addresses[text.size()] = node.value;
 					instruction_size[text.size()] = 2;
-					Argument value{TK_CONSTANT, "0", ""};
+					Argument value{TK_CONSTANT, "0", 0};
 					_push_opcode(jump_type);
 					text.push_back(0x0);
 				}
@@ -221,7 +236,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 				{
 					case TK_CONSTANT:
 					{
-						Argument value{node.type, node.value, ""};
+						Argument value{node.type, node.value, 0};
 						_push_opcode("push_imm", value);
 					} break;
 					case TK_REGISTER:
@@ -246,26 +261,39 @@ void Assembler::_generate_text(const std::string &p_input_file)
 			case TK_ADD:
 			{
 				node = _advance();
-				Argument source{node.type, node.value, ""};
+				Argument source{node.type, node.value, 0};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value, ""};
+				Argument destination{node.type, node.value, 0};
 
 				_push_opcode("add", source, destination);
+			} break;
+			case TK_SUB:
+			{
+				node = _advance();
+				Argument source{node.type, node.value, 0};
+
+				/* skip comma */
+				node = _advance();
+
+				node = _advance();
+				Argument destination{node.type, node.value, 0};
+
+				_push_opcode("sub", source, destination);
 			} break;
 			case TK_MUL:
 			{
 				node = _advance();
-				Argument source{node.type, node.value, ""};
+				Argument source{node.type, node.value, 0};
 
 				/* skip comma */
 				node = _advance();
 
 				node = _advance();
-				Argument destination{node.type, node.value, ""};
+				Argument destination{node.type, node.value, 0};
 
 				_push_opcode("mul", source, destination);
 			} break;
@@ -281,7 +309,7 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 				Argument destination = _calulate_displacement_argument(node);
 
-				if (source.displacement == "")
+				if (source.displacement == 0)
 				{
 					_push_opcode("mov_dreg", source, destination);
 				}
@@ -314,11 +342,18 @@ Assembler::Argument Assembler::_calulate_displacement_argument(Node p_node)
 {
 	Token type = p_node.type;
 	std::string value = p_node.value;
-	std::string displacement = "";
+	int displacement = 0;
 	if (p_node.type == TK_MINUS)
 	{
 		p_node = _advance(); // -
-		displacement = p_node.value;
+		displacement = -std::stoi(p_node.value);
+		p_node = _advance(); // constant
+		type = p_node.type,
+		value = p_node.value;
+	}
+	else if (_peek().type == TK_REGISTER)
+	{
+		displacement = std::stoi(p_node.value);
 		p_node = _advance(); // constant
 		type = p_node.type,
 		value = p_node.value;
@@ -368,7 +403,7 @@ void Assembler::_push_opcode(
 			Argument rm =  source_is_dest ? p_source : p_destination;
 
 			unsigned char mod = 0x00;
-			if (rm.type == TK_REGISTER && rm.displacement == "")
+			if (rm.type == TK_REGISTER && rm.displacement == 0)
 			{
 				mod = REGISTER_ADRESSING;
 			}
@@ -382,17 +417,13 @@ void Assembler::_push_opcode(
 			operand |= register_values.at(rm.value);
 			if (mod == FOUR_BYTE_DISPLACEMENT)
 			{
-				if (!has_immediate && rm.displacement != "")
+				if (!has_immediate && rm.displacement != 0)
 				{
 					has_immediate = true;
-					int displacement = std::stoi(rm.displacement);
-					if (std::stoi(rm.displacement) == 0)
+					int displacement = rm.displacement;
+					if (rm.displacement < 0)
 					{
-						displacement = 0x00000000;
-					}
-					else
-					{
-						displacement = 0xFFFFFFFF ^(displacement - 1);
+						displacement = 0xFFFFFFFF ^(-displacement - 1);
 					}
 					_push_int(immediate, displacement);
 				}
@@ -466,6 +497,19 @@ void Assembler::_load_assembly(const std::string &p_file)
 	assembly_code_size = assembly_code.length();
 	assembly_offset = -1;
 	assembly_line = 0;
+}
+
+Assembler::Node Assembler::_peek()
+{
+	int current_assembly_offset = assembly_offset;
+	int current_assembly_line = assembly_line;
+
+	Node node = _advance();
+
+	assembly_offset = current_assembly_offset;
+	assembly_line = current_assembly_line;
+
+	return node;
 }
 
 Assembler::Node Assembler::_advance()
@@ -626,6 +670,12 @@ Assembler::Node Assembler::_advance()
 					return _make_node(TK_ADD, word, _get_op_type(word));
 				}
 
+				if (word.find("sub") == 0)
+				{
+					return _make_node(TK_SUB, word, _get_op_type(word));
+				}
+
+
 				if (word.find("mul") == 0)
 				{
 					return _make_node(TK_MUL, word, _get_op_type(word));
@@ -649,6 +699,11 @@ Assembler::Node Assembler::_advance()
 				if (word.find("syscall") == 0)
 				{
 					return _make_node(TK_SYSCALL, word);
+				}
+
+				if (word.find("cmp") == 0)
+				{
+					return _make_node(TK_CMP, word);
 				}
 
 				if (word.find("call") == 0)

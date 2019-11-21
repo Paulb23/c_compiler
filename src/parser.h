@@ -225,6 +225,16 @@ private:
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 
+	void _parse_parameter_type_list(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
+	void _parse_parameter_declaration(
+			std::unique_ptr<TreeNode<Node>> &p_parent,
+			bool required = true
+	);
+
 	void _parse_expression(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
@@ -287,6 +297,10 @@ private:
 	);
 
 	void _parse_postfix_expression(
+			std::unique_ptr<TreeNode<Node>> &p_parent
+	);
+
+	void _parse_argument_expression_list(
 			std::unique_ptr<TreeNode<Node>> &p_parent
 	);
 

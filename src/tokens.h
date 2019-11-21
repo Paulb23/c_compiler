@@ -65,6 +65,7 @@ enum Token
 	TK_SEMICOLON,
 	TK_COMMA,
 	TK_DOT,
+	TK_VARGS,
 	TK_QUESION_MARK,
 	TK_COLON,
 
@@ -211,6 +212,7 @@ enum Token
 	TK_MOV,
 	TK_RET,
 	TK_JMP,
+	TK_CMP,
 	TK_CALL,
 	TK_SYSCALL,
 	TK_TEST,
@@ -219,6 +221,7 @@ enum Token
 	TK_POP,
 
 	TK_ADD,
+	TK_SUB,
 	TK_MUL
 };
 
@@ -272,6 +275,7 @@ const std::unordered_map<Token, std::string> token_to_string
 	{TK_SEMICOLON, "SEMICOLON"},
 	{TK_COMMA, "COMMA"},
 	{TK_DOT, "DOT"},
+	{TK_VARGS, "..."},
 	{TK_QUESION_MARK, "QUESTION_MARK"},
 	{TK_COLON, "COLON"},
 	{TK_BIT_NOT, "BIT_NOT"},
@@ -411,6 +415,7 @@ const std::unordered_map<Token, std::string> token_to_string
 	{ TK_MOV, "MOV"},
 	{ TK_RET, "RET"},
 	{ TK_JMP, "JMP"},
+	{ TK_CMP, "CMP"},
 	{ TK_CALL, "CALL"},
 	{ TK_SYSCALL, "SYS_CALL"},
 	{ TK_TEST, "TEST"},
@@ -418,6 +423,7 @@ const std::unordered_map<Token, std::string> token_to_string
 	{ TK_PUSH, "PUSH"},
 	{ TK_POP, "POP"},
 
+	{ TK_SUB, "SUB"},
 	{ TK_ADD, "ADD"},
 	{ TK_MUL, "MUL"}
 };
@@ -430,6 +436,8 @@ const std::unordered_map<Token, int> op_precedence
 
 	{TK_PLUS, 4},
 	{TK_MINUS, 4},
+
+	{TK_EQUAL, 7},
 
 	{TK_ASSIGN, 14}
 };

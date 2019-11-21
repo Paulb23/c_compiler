@@ -43,6 +43,7 @@ void CodeGenerator::generate_code(
 
 	if_counter = 0;
 	if_clause_counter = 0;
+	comp_clause_counter = 0;
 
 	code.clear();
 	current_node_offset = -1;
@@ -175,8 +176,17 @@ void CodeGenerator::_generate_function()
 	_append_line("  movl %esp,%ebp");
 
 	Scope scope;
-	// args here
-	// advance
+	scope.stack_offset = -16;
+	while (current_node.type == TYPE_IDENTIFIER)
+	{
+		Var var;
+		var.scope_level = scope.level;
+		var.stack_offset = scope.stack_offset;
+		scope.var_map[current_node.value] = var;
+		scope.stack_offset -= 8;
+		_advance();
+	}
+	scope.stack_offset = 8;
 
 	if (current_node.type == CODE_BLOCK)
 	{
@@ -377,7 +387,32 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 
 		if (current_node.type == FUNCTION_CALL)
 		{
-			_append_line("  call " + current_node.value);
+			std::string function_name = current_node.value;
+			int arg_count = 0;
+			if (_peek() == TYPE_ARGUMENT_EXPRESSION_LIST)
+			{
+				_advance(); // call
+				_advance(); // arg expression
+				_advance(); // (
+				while (current_node.type == TYPE_EXPRESSION)
+				{
+					arg_count++;
+					_generate_expression(p_scope);
+					_advance(); // ;
+					if (_peek() == TYPE_EXPRESSION)
+					{
+						_advance(); // )
+					}
+					_append_line("  pushl %eax");
+				}
+			}
+			_append_line("  call " + function_name);
+			/* remove args, can be improved with add to esp */
+			while (arg_count > 0)
+			{
+				_append_line("  popl %ecx");
+				arg_count--;
+			}
 			_append_line("  pushl %eax"); /* TODO return is in EAX so this can be removed. */
 			pushed_count++;
 			continue;
@@ -390,8 +425,8 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 				_error(current_node.value + " is not defined.");
 			}
 			pushed_count++;
-			int offset = p_scope.var_map.at(current_node.value).stack_offset;
-			_append_line("  movl -" + std::to_string(offset) + "(%ebp),%eax");
+			int offset = p_scope.var_map.at(current_node.value).stack_offset * -1;
+			_append_line("  movl " + std::to_string(offset) + "(%ebp),%eax");
 			_append_line("  pushl %eax");
 			continue;
 		}
@@ -407,6 +442,27 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 			case TK_PLUS:
 			{
 				_append_line("  addl %ebx,%eax");
+			} break;
+			case TK_MINUS:
+			{
+				/* this is a hack - TODO: refactor */
+				_append_line("  subl %eax,%ebx");
+				_append_line("  pushl %ebx");
+				_append_line("  popl %eax");
+			} break;
+			case TK_EQUAL:
+			{
+				/* this is a hack - TODO: refactor */
+				_append_line("  cmp %ebx,%eax");
+				_append_line("  jz comp_clause_eq_" + std::to_string(comp_clause_counter));
+				_append_line("  pushl $0");
+				_append_line("  popl %eax");
+				_append_line("  jmp comp_clause_end_" + std::to_string(comp_clause_counter));
+				_append_line("comp_clause_eq_" + std::to_string(comp_clause_counter) + ":");
+				_append_line("  pushl $1");
+				_append_line("  popl %eax");
+				_append_line("comp_clause_end_" + std::to_string(comp_clause_counter) + ":");
+				comp_clause_counter++;
 			} break;
 			case TK_STAR:
 			{
