@@ -64,6 +64,8 @@ private:
 	unsigned int if_counter;
 	unsigned int if_clause_counter;
 
+	unsigned int loop_counter;
+
 	unsigned int comp_clause_counter;
 
 	unsigned int last_line;

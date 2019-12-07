@@ -218,7 +218,9 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 				if (label_addresses.count(node.value))
 				{
-					// TODO: label already exists.
+					char relative_address = (label_addresses[node.value] - text.size()) - 2;
+					_push_opcode(jump_type);
+					text.push_back(relative_address & 0xFF);
 				}
 				else
 				{

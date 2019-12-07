@@ -43,6 +43,7 @@ void CodeGenerator::generate_code(
 
 	if_counter = 0;
 	if_clause_counter = 0;
+	loop_counter = 0;
 	comp_clause_counter = 0;
 
 	code.clear();
@@ -285,6 +286,61 @@ void CodeGenerator::_generate_statement(const Scope &p_scope)
 	if (current_node.type == TK_IF)
 	{
 		_generate_if_block(p_scope);
+		return;
+	}
+
+	if (current_node.type == TK_WHILE)
+	{
+		unsigned int loop = loop_counter++;
+
+		_advance(); // WHILE
+
+		_append_line("loop_start_" + std::to_string(loop) + ":");
+		_generate_expression(p_scope);
+		_append_line("  test %eax,%eax");
+		_append_line("  jz loop_end_" + std::to_string(loop));
+
+		_advance(); // ;
+		_advance(); // STATEMENT
+
+		if (current_node.type == TK_BRACE_OPEN)
+		{
+			_generate_code_block(p_scope);
+		}
+		else
+		{
+			_generate_statement(p_scope);
+		}
+
+		_append_line("  jmp loop_start_" + std::to_string(loop));
+		_append_line("loop_end_" + std::to_string(loop) + ":");
+		return;
+	}
+
+	if (current_node.type == TK_DO)
+	{
+		unsigned int loop = loop_counter++;
+
+		_advance(); // DO
+		_advance(); // STATEMENT
+
+		_append_line("loop_start_" + std::to_string(loop) + ":");
+		if (current_node.type == TK_BRACE_OPEN)
+		{
+			_generate_code_block(p_scope);
+		}
+		else
+		{
+			_generate_statement(p_scope);
+		}
+		_advance(); // WHILE
+		_generate_expression(p_scope);
+		_append_line("  test %eax,%eax");
+		_append_line("  jz loop_end_" + std::to_string(loop));
+		_advance(); // ;
+
+		_append_line("  jmp loop_start_" + std::to_string(loop));
+		_append_line("loop_end_" + std::to_string(loop) + ":");
 		return;
 	}
 
