@@ -619,11 +619,13 @@ void Parser::_parse_iteration_statement(
 	p_parent->add_child(open_paren);
 	_advance();
 
-	// TODO: handle declarations
-	// TODO: supports empty expressions
-	std::unique_ptr<TreeNode<Node>> main_expression = _make_node(TYPE_EXPRESSION, "");
-	_parse_expression(main_expression);
-	p_parent->add_child(main_expression);
+	/* main expression / for init section */
+	if (type_token != TK_FOR || current_token != TK_SEMICOLON)
+	{
+		std::unique_ptr<TreeNode<Node>> main_expression = _make_node(TYPE_EXPRESSION, "");
+		_parse_expression(main_expression);
+		p_parent->add_child(main_expression);
+	}
 
 	if (type_token == TK_FOR)
 	{
@@ -636,17 +638,21 @@ void Parser::_parse_iteration_statement(
 		p_parent->add_child(first_semicolon);
 		_advance();
 
-		std::unique_ptr<TreeNode<Node>> second_expression = _make_node(TYPE_EXPRESSION, "");
-		_parse_expression(second_expression);
-		p_parent->add_child(second_expression);
-
-		if (current_token == TK_SEMICOLON)
+		/* empty condition statment? */
+		if (current_token != TK_SEMICOLON)
 		{
-			std::unique_ptr<TreeNode<Node>> second_semicolon = _make_node(TK_SEMICOLON, lexer.get_token_value());
-			p_parent->add_child(second_semicolon);
-			_advance();
+			std::unique_ptr<TreeNode<Node>> second_expression = _make_node(TYPE_EXPRESSION, "");
+			_parse_expression(second_expression);
+			p_parent->add_child(second_expression);
+		}
 
+		std::unique_ptr<TreeNode<Node>> second_semicolon = _make_node(TK_SEMICOLON, lexer.get_token_value());
+		p_parent->add_child(second_semicolon);
+		_advance();
 
+		/* empty post statment? */
+		if (current_token != TK_PARENTHESIS_CLOSE)
+		{
 			std::unique_ptr<TreeNode<Node>> third_expression = _make_node(TYPE_EXPRESSION, "");
 			_parse_expression(third_expression);
 			p_parent->add_child(third_expression);

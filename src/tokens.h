@@ -437,6 +437,8 @@ const std::unordered_map<Token, int> op_precedence
 	{TK_PLUS, 4},
 	{TK_MINUS, 4},
 
+	{TK_LESS_THAN, 6},
+
 	{TK_EQUAL, 7},
 
 	{TK_ASSIGN, 14}

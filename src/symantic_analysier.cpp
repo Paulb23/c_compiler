@@ -366,11 +366,14 @@ void SymanticAnalysier::_analyse_statement(
 
 			_analyse_expression(for_node);
 			_analyse_expression(for_node);
-			_analyse_expression(for_node);
+
+			std::unique_ptr<TreeNode<Node>> post_expression = _make_node(TYPE_EXPRESSION, current_node.value);
+			_analyse_expression(post_expression);
 
 			std::unique_ptr<TreeNode<Node>> statment = _make_node(TYPE_STATEMENT, current_node.value);
 			_analyse_statement(statment);
 			for_node->add_child(statment);
+			for_node->add_child(post_expression);
 
 			p_parent->add_child(for_node);
 	    } break;

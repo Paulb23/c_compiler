@@ -677,7 +677,6 @@ Assembler::Node Assembler::_advance()
 					return _make_node(TK_SUB, word, _get_op_type(word));
 				}
 
-
 				if (word.find("mul") == 0)
 				{
 					return _make_node(TK_MUL, word, _get_op_type(word));
@@ -693,7 +692,7 @@ Assembler::Node Assembler::_advance()
 					return _make_node(TK_RET, word);
 				}
 
-				if (word.find("jz") == 0 || word.find("jmp") == 0)
+				if (jump_operations.count(word))
 				{
 					return _make_node(TK_JMP, word);
 				}

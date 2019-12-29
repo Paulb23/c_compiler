@@ -1,4 +1,4 @@
-//result=20
+//result=30
 
 int main()
 {
@@ -23,5 +23,19 @@ int main()
 			y = 1;
 		}
 	} while (y == 0);
+
+	for (y = 0; y < 10; y = y + 1)
+	{
+		x = x + 1;
+	}
+
+	//for (;;) {
+	//	break;
+	//}
+
+	//for (;y;)
+	//{
+	//}
+
 	return x;
 }

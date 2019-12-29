@@ -317,6 +317,67 @@ void CodeGenerator::_generate_statement(const Scope &p_scope)
 		return;
 	}
 
+	if (current_node.type == TK_FOR)
+	{
+		unsigned int loop = loop_counter++;
+
+		_advance(); // FOR
+
+		 // loop init
+		if (_peek() != TK_SEMICOLON)
+		{
+			_generate_expression(p_scope);
+		}
+		else
+		{
+			_advance(); // EXPRESSION
+		}
+		_advance(); // ;
+
+		_append_line("loop_start_" + std::to_string(loop) + ":");
+		// loop condition, if empty make infinate
+		if (_peek() != TK_SEMICOLON)
+		{
+			_generate_expression(p_scope);
+		}
+		else
+		{
+			_advance();
+			_append_line("  pushl $1");
+			_append_line("  popl %eax");
+		}
+		_append_line("  test %eax,%eax");
+		_append_line("  jz loop_end_" + std::to_string(loop));
+		_advance(); // ;
+
+		_advance(); // STATEMENT
+
+		if (current_node.type == TK_BRACE_OPEN)
+		{
+			_generate_code_block(p_scope);
+		}
+		else
+		{
+			_generate_statement(p_scope);
+		}
+
+		// loop post
+		_advance(); // EXPRESSION
+		if (_peek() != TK_SEMICOLON)
+		{
+			_generate_expression(p_scope);
+		}
+		else
+		{
+			_advance(); // EXPRESSION
+		}
+		_advance(); // ;
+
+		_append_line("  jmp loop_start_" + std::to_string(loop));
+		_append_line("loop_end_" + std::to_string(loop) + ":");
+		return;
+	}
+
 	if (current_node.type == TK_DO)
 	{
 		unsigned int loop = loop_counter++;
@@ -426,6 +487,7 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 	 * Use a stack based system
 	 */
 	int pushed_count = 0;
+	std::string previous = "";
 	while (current_node.type != TK_SEMICOLON)
 	{
 		_advance();
@@ -484,6 +546,7 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 			int offset = p_scope.var_map.at(current_node.value).stack_offset * -1;
 			_append_line("  movl " + std::to_string(offset) + "(%ebp),%eax");
 			_append_line("  pushl %eax");
+			previous = current_node.value;
 			continue;
 		}
 
@@ -495,6 +558,11 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 
 		switch (current_node.type)
 		{
+			case TK_ASSIGN:
+			{
+				int offset = p_scope.var_map.at(previous).stack_offset;
+				_append_line("  movl %eax,-" + std::to_string(offset) + "(%ebp)");
+			} break;
 			case TK_PLUS:
 			{
 				_append_line("  addl %ebx,%eax");
@@ -516,6 +584,20 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 				_append_line("  jmp comp_clause_end_" + std::to_string(comp_clause_counter));
 				_append_line("comp_clause_eq_" + std::to_string(comp_clause_counter) + ":");
 				_append_line("  pushl $1");
+				_append_line("  popl %eax");
+				_append_line("comp_clause_end_" + std::to_string(comp_clause_counter) + ":");
+				comp_clause_counter++;
+			} break;
+			case TK_LESS_THAN:
+			{
+				/* ditto. */
+				_append_line("  cmp %ebx,%eax");
+				_append_line("  jle comp_clause_eq_" + std::to_string(comp_clause_counter));
+				_append_line("  pushl $1");
+				_append_line("  popl %eax");
+				_append_line("  jmp comp_clause_end_" + std::to_string(comp_clause_counter));
+				_append_line("comp_clause_eq_" + std::to_string(comp_clause_counter) + ":");
+				_append_line("  pushl $0");
 				_append_line("  popl %eax");
 				_append_line("comp_clause_end_" + std::to_string(comp_clause_counter) + ":");
 				comp_clause_counter++;

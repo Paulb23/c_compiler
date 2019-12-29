@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include <elf.h>
 
 #include "tokens.h"
@@ -79,11 +80,43 @@ private:
 		{"mul", 0xAF},
 		{"ret", 0xC3},
 
-		{"test",0x85},
+		{"test", 0x85},
 
 		{"call", 0xE8},
 		{"cmp",  0x3B},
-		{"jz",   0x74},
+
+		{"jo",    0x70},
+		{"jno",   0x71},
+		{"jb",    0x72},
+		{"jnae",  0x72},
+		{"jc",    0x72},
+		{"jnb",   0x73},
+		{"jae",   0x73},
+		{"jnc",   0x73},
+		{"je",    0x74},
+		{"jz",    0x74},
+		{"jne",   0x75},
+		{"jnz",   0x75},
+		{"jbe",   0x76},
+		{"jna",   0x76},
+		{"ja",    0x77},
+		{"jnbe",  0x77},
+		{"js",    0x78},
+		{"jns",   0x79},
+		{"jp",    0x7A},
+		{"jse",   0x7A},
+		{"jnp",   0x7B},
+		{"jpo",   0x7B},
+		{"jl",    0x7C},
+		{"jnge",  0x7C},
+		{"jge",   0x7D},
+		{"jnl",   0x7D},
+		{"jle",   0x7E},
+		{"jng",   0x7E},
+		{"jg",    0x7F},
+		{"jnle",  0x7F},
+		{"jcxz",  0xE3},
+		{"jecxz", 0xE3},
 		{"jmp",  0xEB}
 	};
 
@@ -151,6 +184,43 @@ private:
 	/*
 	 * Assembeler Lexer parser
 	 */
+	const std::set<std::string> jump_operations
+	{
+		"jo",
+		"jno",
+		"jb",
+		"jnae",
+		"jc",
+		"jnb",
+		"jae",
+		"jnc",
+		"je",
+		"jz",
+		"jne",
+		"jnz",
+		"jbe",
+		"jna",
+		"ja",
+		"jnbe",
+		"js",
+		"jns",
+		"jp",
+		"jse",
+		"jnp",
+		"jpo",
+		"jl",
+		"jnge",
+		"jge",
+		"jnl",
+		"jle",
+		"jng",
+		"jg",
+		"jnle",
+		"jcxz",
+		"jecxz",
+		"jmp"
+	};
+
 	std::string assembly_code;
 	int assembly_code_size;
 	int assembly_offset;
