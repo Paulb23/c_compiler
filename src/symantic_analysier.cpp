@@ -299,11 +299,51 @@ void SymanticAnalysier::_analyse_statement(
 			_advance(); // lvalue
 			if (current_node.type != TK_POST_INCREMENT && current_node.type != TK_POST_DECREMENT)
 			{
-				_advance(); // op
+				if (current_node.token != TK_ASSIGN)
+				{
+					/* HACK: Need to inject lvalue for self expression. */
+					Parser::Node op;
+					switch (current_node.token)
+					{
+						case TK_ASSIGN_PLUS:
+						{
+							op.token = TK_PLUS;
+							op.type = TK_PLUS;
+							op.value = "+";
+						} break;
+						case TK_ASSIGN_MINUS:
+						{
+							op.token = TK_MINUS;
+							op.type = TK_MINUS;
+							op.value = "-";
+						} break;
+						case TK_ASSIGN_MULTIPLICATION:
+						{
+							op.token = TK_STAR;
+							op.type = TK_STAR;
+							op.value = "*";
+						} break;
+					}
+					_advance();
+					tree_vector.insert(tree_vector.begin() + current_node_offset, op);
+
+					Parser::Node lnode;
+					lnode.type = TYPE_IDENTIFIER;
+					lnode.value = value;
+					lnode.token = TK_IDENTIFIER;
+					tree_vector.insert(tree_vector.begin() + current_node_offset, lnode);
+
+					current_node = tree_vector[current_node_offset];
+				}
+				else
+				{
+					_advance(); // assign
+				}
 			}
 
 			/* HACK: Need to inject lvalue for self expression. */
-			if (current_node.type == TK_POST_INCREMENT || current_node.type == TK_POST_DECREMENT) {
+			if (current_node.type == TK_POST_INCREMENT || current_node.type == TK_POST_DECREMENT)
+			{
 				Parser::Node lnode;
 				lnode.type = TYPE_IDENTIFIER;
 				lnode.value = value;
@@ -481,6 +521,36 @@ void SymanticAnalysier::_analyse_expression(
 			continue;
 		}
 
+		if (current_node.token == TK_PARENTHESIS_OPEN)
+		{
+			op_stack.push(current_node);
+			_advance();
+			continue;
+		}
+
+		if (current_node.token == TK_PARENTHESIS_CLOSE) {
+			_advance();
+			bool found = false;
+			while (!op_stack.empty())
+			{
+				if (op_stack.top().token == TK_PARENTHESIS_OPEN)
+				{
+					found = true;
+					op_stack.pop();
+					break;
+				}
+
+				output_queue.push(op_stack.top());
+				op_stack.pop();
+			}
+
+			if (!found)
+			{
+				_error("mismatched braces in expression.");
+			}
+			continue;
+		}
+
 		if (!op_precedence.count(current_node.token))
 		{
 			_advance();
@@ -494,7 +564,7 @@ void SymanticAnalysier::_analyse_expression(
 			continue;
 		}
 
-		while (!op_stack.empty())
+		while (!op_stack.empty() && op_stack.top().token != TK_PARENTHESIS_OPEN)
 		{
 			if (op_precedence.at(op_stack.top().token) < op_precedence.at(current_node.token))
 			{

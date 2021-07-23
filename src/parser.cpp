@@ -847,8 +847,31 @@ void Parser::_parse_assignment_expression(
 
 	std::unique_ptr<TreeNode<Node>> assignment_op_node = _make_node(TYPE_ASSIGNMENT_EXPRESSION, lexer.get_token_value(), current_token);
 	p_parent->add_child(assignment_op_node);
+
+	/* Not 100% correct, but add extra parens around assign ops ie +=, *=, /= for correct execution order. */
+	bool add_parens = current_token != TK_ASSIGN;
+	if (add_parens)
+	{
+		std::unique_ptr<TreeNode<Node>> open_parenthesis = _make_node(
+					TK_PARENTHESIS_OPEN,
+					"(",
+					TK_PARENTHESIS_OPEN
+		);
+		p_parent->add_child(open_parenthesis);
+	}
+
 	_advance();
 	_parse_assignment_expression(p_parent);
+
+	if (add_parens)
+	{
+		std::unique_ptr<TreeNode<Node>> close_parenthesis = _make_node(
+					TK_PARENTHESIS_CLOSE,
+					")",
+					TK_PARENTHESIS_CLOSE
+		);
+		p_parent->add_child(close_parenthesis);
+	}
 }
 
 void Parser::_parse_conditional_expression(
