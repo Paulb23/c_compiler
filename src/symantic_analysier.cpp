@@ -292,11 +292,25 @@ void SymanticAnalysier::_analyse_statement(
 
 			/* skip for lvalue, need to handle other types */
 			while (current_node.type != TYPE_IDENTIFIER) { _advance(); }
-			std::unique_ptr<TreeNode<Node>> lvalue = _make_node(TYPE_IDENTIFIER, current_node.value);
+			std::string value = current_node.value;
+			std::unique_ptr<TreeNode<Node>> lvalue = _make_node(TYPE_IDENTIFIER, value);
 			assignment_node->add_child(lvalue);
 
 			_advance(); // lvalue
-			_advance(); // op
+			if (current_node.type != TK_POST_INCREMENT && current_node.type != TK_POST_DECREMENT)
+			{
+				_advance(); // op
+			}
+
+			/* HACK: Need to inject lvalue for self expression. */
+			if (current_node.type == TK_POST_INCREMENT || current_node.type == TK_POST_DECREMENT) {
+				Parser::Node lnode;
+				lnode.type = TYPE_IDENTIFIER;
+				lnode.value = value;
+				lnode.token = TK_IDENTIFIER;
+				tree_vector.insert(tree_vector.begin() + current_node_offset, lnode);
+				current_node = tree_vector[current_node_offset];
+			}
 
 			_analyse_expression(assignment_node);
 			p_parent->add_child(assignment_node);

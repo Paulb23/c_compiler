@@ -299,6 +299,28 @@ void Assembler::_generate_text(const std::string &p_input_file)
 
 				_push_opcode("mul", source, destination);
 			} break;
+			case TK_INC:
+			{
+				node = _advance();
+				if (node.type != TK_REGISTER)
+				{
+					_error("expected register but found '" + node.value + "'");
+				}
+				text.push_back(0x48);
+				text.push_back(0xFF);
+				_push_opcode("inc_" + node.value);
+			} break;
+			case TK_DEC:
+			{
+				node = _advance();
+				if (node.type != TK_REGISTER)
+				{
+					_error("expected register but found '" + node.value + "'");
+				}
+				text.push_back(0x48);
+				text.push_back(0xFF);
+				_push_opcode("dec_" + node.value);
+			} break;
 			case TK_MOV:
 			{
 				node = _advance();
@@ -680,6 +702,16 @@ Assembler::Node Assembler::_advance()
 				if (word.find("mul") == 0)
 				{
 					return _make_node(TK_MUL, word, _get_op_type(word));
+				}
+
+				if (word.find("inc") == 0)
+				{
+					return _make_node(TK_INC, word, _get_op_type(word));
+				}
+
+				if (word.find("dec") == 0)
+				{
+					return _make_node(TK_DEC, word, _get_op_type(word));
 				}
 
 				if (word.find("mov") == 0)

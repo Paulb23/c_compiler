@@ -108,6 +108,8 @@ enum Token
 
 	TK_INCREMENT,
 	TK_DECREMENT,
+	TK_POST_INCREMENT,
+	TK_POST_DECREMENT,
 
 	TK_EOF,
 	TK_ERROR,
@@ -222,7 +224,9 @@ enum Token
 
 	TK_ADD,
 	TK_SUB,
-	TK_MUL
+	TK_MUL,
+	TK_INC,
+	TK_DEC
 };
 
 const std::unordered_map<Token, std::string> token_to_string
@@ -312,6 +316,8 @@ const std::unordered_map<Token, std::string> token_to_string
 	{TK_LESS_THAN_EQUAL, "LESS_THAN_EQUAL"},
 	{TK_INCREMENT, "INCREMENT"},
 	{TK_DECREMENT, "DECREMENT"},
+	{TK_POST_INCREMENT, "POST_INCREMENT"},
+	{TK_POST_DECREMENT, "POST_DECREMENT"},
 	{TK_EOF, "EOF"},
 	{TK_ERROR, "ERROR"},
 
@@ -425,11 +431,16 @@ const std::unordered_map<Token, std::string> token_to_string
 
 	{ TK_SUB, "SUB"},
 	{ TK_ADD, "ADD"},
-	{ TK_MUL, "MUL"}
+	{ TK_MUL, "MUL"},
+	{ TK_INC, "INC"},
+	{ TK_DEC, "DEC"}
 };
 
 const std::unordered_map<Token, int> op_precedence
 {
+	{TK_POST_INCREMENT, 1},
+	{TK_POST_DECREMENT, 1},
+
 	{TK_STAR, 3},
 	{TK_DIVIDE, 3},
 	{TK_MODULO, 3},

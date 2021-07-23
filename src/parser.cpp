@@ -1172,6 +1172,19 @@ void Parser::_parse_postfix_expression(
 	_parse_primary_expression(primary_expression);
 	p_parent->add_child(primary_expression);
 
+	if (current_token == TK_INCREMENT || current_token == TK_DECREMENT)
+	{
+		Token token = (current_token == TK_INCREMENT) ? TK_POST_INCREMENT : TK_POST_DECREMENT;
+		std::unique_ptr<TreeNode<Node>> op = _make_node(
+					token,
+					lexer.get_token_value(),
+					token
+		);
+		p_parent->add_child(op);
+		_advance();
+		return;
+	}
+
 	if (current_token == TK_PARENTHESIS_OPEN)
 	{
 		std::unique_ptr<TreeNode<Node>> open_parenthesis = _make_node(

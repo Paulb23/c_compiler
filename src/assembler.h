@@ -55,6 +55,24 @@ private:
 		{"add", 0x01},
 		{"sub", 0x29},
 
+		{"inc_eax", 0xC0},
+		{"inc_ecx", 0xC1},
+		{"inc_edx", 0xC2},
+		{"inc_ebx", 0xC3},
+		{"inc_esp", 0xC4},
+		{"inc_ebp", 0xC5},
+		{"inc_esi", 0xC6},
+		{"inc_edi", 0xC7},
+
+		{"dec_eax", 0xC8},
+		{"dec_ecx", 0xC9},
+		{"dec_edx", 0xCA},
+		{"dec_ebx", 0xCB},
+		{"dec_esp", 0xCC},
+		{"dec_ebp", 0xCD},
+		{"dec_esi", 0xCE},
+		{"dec_edi", 0xCF},
+
 		{"push_eax", 0x50},
 		{"push_ecx", 0x51},
 		{"push_edx", 0x52},
@@ -62,7 +80,7 @@ private:
 		{"push_esp", 0x54},
 		{"push_ebp", 0x55},
 		{"push_esi", 0x56},
-		{"push_esi", 0x57},
+		{"push_edi", 0x57},
 		{"push_imm", 0x68},
 
 		{"pop_eax", 0x58},
@@ -72,7 +90,7 @@ private:
 		{"pop_esp", 0x5C},
 		{"pop_ebp", 0x5D},
 		{"pop_esi", 0x5E},
-		{"pop_esi", 0x5F},
+		{"pop_edi", 0x5F},
 
 		{"mov_dreg",     0x89},
 		{"mov_sreg",     0x8B},

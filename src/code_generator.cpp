@@ -75,7 +75,7 @@ void CodeGenerator::generate_code(
 	std::cout << "-----------------------------------------------" << std::endl;
 	std::ofstream file;
 	file.open(p_output_file);
-	for (const std::string line : code)
+	for (const std::string &line : code)
 	{
 		std::cout << line << std::endl;
 		file << line + "\n";
@@ -562,6 +562,14 @@ void CodeGenerator::_generate_expression(const Scope &p_scope)
 			{
 				int offset = p_scope.var_map.at(previous).stack_offset;
 				_append_line("  movl %eax,-" + std::to_string(offset) + "(%ebp)");
+			} break;
+			case TK_POST_INCREMENT:
+			{
+				_append_line("  incl %eax");
+			} break;
+			case TK_POST_DECREMENT:
+			{
+				_append_line("  decl %eax");
 			} break;
 			case TK_PLUS:
 			{
